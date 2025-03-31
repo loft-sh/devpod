@@ -40,6 +40,7 @@ func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, owner 
 		if err != nil {
 			return nil, err
 		}
+
 		// extract pure workspace list first
 		for _, result := range proWorkspaceResults {
 			proWorkspaces = append(proWorkspaces, result.workspaces...)
@@ -135,6 +136,7 @@ type listProWorkspacesResult struct {
 
 func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, owner platform.OwnerFilter, log log.Logger) (map[string]listProWorkspacesResult, error) {
 	results := map[string]listProWorkspacesResult{}
+
 	// lock around `results`
 	var mu sync.Mutex
 	wg := sync.WaitGroup{}
@@ -143,12 +145,14 @@ func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, owner p
 		if !providerContextConfig.Initialized {
 			continue
 		}
+
 		l := log.ErrorStreamOnly()
 		providerConfig, err := providerpkg.LoadProviderConfig(devPodConfig.DefaultContext, provider)
 		if err != nil {
 			l.Warnf("load provider config for provider \"%s\": %v", provider, err)
 			continue
 		}
+
 		// only get pro providers
 		if !providerConfig.IsProxyProvider() && !providerConfig.IsDaemonProvider() {
 			continue
@@ -184,9 +188,7 @@ func listProWorkspacesForProvider(ctx context.Context, devPodConfig *config.Conf
 		return nil, fmt.Errorf("cannot list pro workspaces with provider %s", provider)
 	}
 	if err != nil {
-		if log.GetLevel() < logrus.DebugLevel {
-			log.Warnf("Failed to list pro workspaces for provider %s", provider)
-		} else {
+		if log.GetLevel() >= logrus.DebugLevel {
 			log.Warnf("Failed to list pro workspaces for provider %s: %v", provider, err)
 		}
 		return nil, err

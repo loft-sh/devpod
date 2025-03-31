@@ -31,14 +31,17 @@ for os in $BUILD_PLATFORMS; do
 done
 echo "[INFO] Built binaries for all platforms in test/ directory"
 
-if [[ -z "${SKIP_INSTALL}" ]]; then
+# if not true, install the binary
+if [[ "${SKIP_INSTALL}" != "true" ]]; then
     if command -v sudo &> /dev/null; then
         go build -o test/devpod && sudo mv test/devpod /usr/local/bin/
     else 
         go install .
     fi
+    echo "[INFO] Installed devpod binary to /usr/local/bin"
+else 
+    echo "[INFO] Skipping install of devpod binary"
 fi
-echo "[INFO] Built devpod binary and moved to /usr/local/bin"
 
 if [[ $BUILD_PLATFORMS == *"linux"* ]]; then
     cp test/devpod-cli-linux-amd64 test/devpod-linux-amd64 
