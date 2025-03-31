@@ -27,7 +27,7 @@ jobs:
   test-e2e:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       max-parallel: 16
       matrix:
         label:
@@ -92,7 +92,7 @@ jobs:
     # We run this only on PRs, for pre-releases we run the full separate workflow
     if: ${{ github.event_name == 'pull_request' }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       max-parallel: 1
       matrix:
         label:
