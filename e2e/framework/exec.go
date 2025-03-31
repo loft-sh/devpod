@@ -31,6 +31,8 @@ func (f *Framework) ExecCommandStdout(ctx context.Context, args []string) error 
 	cmd := exec.CommandContext(ctx, filepath.Join(f.DevpodBinDir, f.DevpodBinName), args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Dir = os.TempDir()
+
 	if err := cmd.Run(); err != nil {
 		return err
 	}
@@ -45,6 +47,7 @@ func (f *Framework) ExecCommand(ctx context.Context, captureStdOut, searchForStr
 	cmd := exec.CommandContext(ctx, filepath.Join(f.DevpodBinDir, f.DevpodBinName), args...)
 	cmd.Stdout = io.MultiWriter(os.Stdout, &execOut)
 	cmd.Stderr = os.Stderr
+	cmd.Dir = os.TempDir()
 
 	if err := cmd.Run(); err != nil {
 		return err
@@ -69,6 +72,7 @@ func (f *Framework) ExecCommandCapture(ctx context.Context, args []string) (stri
 	cmd := exec.CommandContext(ctx, filepath.Join(f.DevpodBinDir, f.DevpodBinName), args...)
 	cmd.Stdout = io.MultiWriter(os.Stdout, &execOut)
 	cmd.Stderr = io.MultiWriter(os.Stderr, &execErr)
+	cmd.Dir = os.TempDir()
 
 	err := cmd.Run()
 	return execOut.String(), execErr.String(), err
