@@ -75,7 +75,7 @@ func GetContextSuggestions(rootCmd *cobra.Command, context, provider string, arg
 	}
 
 	var suggestions []string
-	for contextName, _ := range devPodConfig.Contexts {
+	for contextName := range devPodConfig.Contexts {
 		if strings.HasPrefix(contextName, toComplete) {
 			suggestions = append(suggestions, contextName)
 		}
