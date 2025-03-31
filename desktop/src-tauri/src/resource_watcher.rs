@@ -9,7 +9,6 @@ use crate::{
 };
 use crate::{AppHandle, AppState};
 use anyhow::anyhow;
-use dirs::home_dir;
 use log::{debug, error, info};
 use serde::Deserialize;
 use std::{collections::HashSet, hash::Hash, time};
@@ -248,22 +247,12 @@ impl Daemon {
         }
     }
 
-    pub fn status(&self) -> &daemon::DaemonStatus {
-        return &self.status;
+    pub fn get_client(&self) -> &daemon::client::Client {
+        return &self.client;
     }
 
     pub async fn get_status(&self) -> anyhow::Result<daemon::DaemonStatus> {
         return self.client.status().await;
-    }
-
-    pub async fn proxy_request(
-        &self,
-        req: daemon::client::Request,
-    ) -> anyhow::Result<daemon::client::Response> {
-        let path = req.uri().path_and_query();
-        debug!("proxying daemon request: {}", path.expect("Invalid path"));
-
-        return self.client.proxy(req).await;
     }
 
     pub async fn try_start(&mut self, host: String, app_handle: &AppHandle) {
@@ -453,7 +442,7 @@ pub async fn shutdown(app_handle: &AppHandle) {
 }
 
 async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
-    let state = app_handle.state::<AppState>();
+    let state: tauri::State<'_, AppState> = app_handle.state::<AppState>();
     let mut pro_state = state.pro.write().await;
     let mut all_ready = true;
 
@@ -479,6 +468,7 @@ async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
         if let Some(menu_item) = &instance.menu_item {
             let _ = menu_item.set_icon(Some(daemon.status.state.get_icon()));
         }
+
         match daemon.get_status().await {
             Ok(status) => {
                 daemon.status = status;

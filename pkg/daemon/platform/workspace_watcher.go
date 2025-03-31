@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
@@ -65,7 +66,8 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 		return err
 	}
 
-	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*120,
+	started := &atomic.Bool{}
+	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*10,
 		informers.WithNamespace(project.ProjectNamespace(config.Project)),
 	)
 	workspaceInformer := factory.Management().V1().DevPodWorkspaceInstances()
@@ -77,7 +79,9 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 				return
 			}
 			instanceStore.Add(instance)
-			onChange(instanceStore.List())
+			if started.Load() {
+				onChange(instanceStore.List())
+			}
 		},
 		UpdateFunc: func(oldObj interface{}, newObj interface{}) {
 			oldInstance, ok := oldObj.(*managementv1.DevPodWorkspaceInstance)
@@ -89,7 +93,9 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 				return
 			}
 			instanceStore.Update(oldInstance, newInstance)
-			onChange(instanceStore.List())
+			if started.Load() {
+				onChange(instanceStore.List())
+			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			instance, ok := obj.(*managementv1.DevPodWorkspaceInstance)
@@ -105,15 +111,14 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 				}
 			}
 			instanceStore.Delete(instance)
-			onChange(instanceStore.List())
+			if started.Load() {
+				onChange(instanceStore.List())
+			}
 		},
 	})
 	if err != nil {
 		return err
 	}
-
-	stopCh := make(chan struct{})
-	defer close(stopCh)
 
 	go func() {
 		defer func() {
@@ -123,8 +128,9 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 		}()
 
 		config.Log.Info("starting workspace watcher")
-		factory.Start(stopCh)
-		factory.WaitForCacheSync(stopCh)
+		factory.Start(ctx.Done())
+		factory.WaitForCacheSync(ctx.Done())
+		started.Store(true)
 
 		// Kick off initial message
 		onChange(instanceStore.List())
@@ -132,12 +138,9 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 		// periodically collect workspace metrics
 		instanceStore.collectWorkspaceMetrics(ctx, onChange)
 	}()
-	select {
-	case <-ctx.Done():
-	case <-stopCh:
-	}
-	config.Log.Debug("workspace watcher done")
 
+	<-ctx.Done()
+	config.Log.Debug("workspace watcher done")
 	return nil
 }
 

@@ -7,7 +7,7 @@ import { ManagementV1ProjectClusters } from "@loft-enterprise/client/gen/models/
 import { ManagementV1ProjectTemplates } from "@loft-enterprise/client/gen/models/managementV1ProjectTemplates"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 import { ManagementV1UserProfile } from "@loft-enterprise/client/gen/models/managementV1UserProfile"
-import { Result, ResultError, Return, isError } from "../../lib"
+import { Result, ResultError, Return, isError, sleep } from "../../lib"
 import {
   TGitCredentialHelperData,
   TImportWorkspaceConfig,
@@ -199,7 +199,6 @@ export class DaemonClient extends ProClient {
       }
 
       const json: T = await res.json().catch(() => "")
-
       return Return.Value(json)
     } catch (e) {
       return this.handleError(e, "unable to get resource")
@@ -249,7 +248,13 @@ export class DaemonClient extends ProClient {
       details.push("Daemon is starting up")
     }
 
-    return Return.Value({ healthy, details, loginRequired: status.loginRequired })
+    // if the backend state is running but we are not online, something is wrong with networking
+    if (!status.online) {
+      healthy = false
+      details.push("Platform is offline")
+    }
+
+    return Return.Value({ healthy, details, loginRequired: status.loginRequired, online: status.online, daemonState: status.state })
   }
 
   public watchWorkspaces(
@@ -359,8 +364,14 @@ class WorkspaceWatcher {
   ) {}
 
   public cancel() {
-    this.abortController.abort("watcher cancelled")
-    this.reader?.cancel()
+    try {
+      this.abortController.abort("watcher cancelled")
+      this.reader?.cancel().catch((err) => {
+        console.debug("cancel failed", err)
+      })
+    } catch(err) {
+      console.error(err)
+    }
     this.reader = undefined
     this.buffer = ""
   }
@@ -389,10 +400,12 @@ class WorkspaceWatcher {
         .finally(async () => {
           if (!this.abortController.signal.aborted && !(await this.reader?.closed)) {
             // Either the webview or the daemon terminated the watcher, try to reconnect
+            console.info("reconnect")
             this.reader = undefined
             this.buffer = ""
             this.watch()
           }
+          
           // Otherwise caller is responsible for reestablishing connection
         })
       return this.cancel.bind(this)

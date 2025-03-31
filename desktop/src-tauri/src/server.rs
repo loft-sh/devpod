@@ -1,4 +1,4 @@
-use crate::{ui_messages, util, AppHandle, AppState};
+use crate::{ui_messages, util, AppHandle, AppState, daemon};
 use axum::{
     body::Body,
     extract::{
@@ -12,7 +12,7 @@ use axum::{
     Json, Router,
 };
 use http::Method;
-use log::{info, warn};
+use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tauri::Manager;
@@ -86,14 +86,27 @@ async fn daemon_status_handler(
     Path(pro_id): Path<String>,
     AxumState(server): AxumState<ServerState>,
 ) -> impl IntoResponse {
+    return match new_daemon_client(pro_id, server).await {
+        Some(client) => match client.status().await {
+            Ok(status) => Json(status).into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        None => StatusCode::NOT_FOUND.into_response(),
+    };
+}
+
+async fn new_daemon_client(
+    pro_id: String,
+    server: ServerState,
+) -> Option<daemon::client::Client> {
     let state = server.app_handle.state::<AppState>();
     let pro = state.pro.read().await;
     return match pro.find_instance(pro_id) {
         Some(pro_instance) => match pro_instance.daemon() {
-            Some(daemon) => Json(daemon.status()).into_response(),
-            None => StatusCode::NOT_FOUND.into_response(),
+            Some(daemon) => Some(daemon.get_client().clone()),
+            None => None,
         },
-        None => StatusCode::NOT_FOUND.into_response(),
+        None => None,
     };
 }
 
@@ -103,10 +116,10 @@ async fn daemon_restart_handler(
 ) -> impl IntoResponse {
     let state = server.app_handle.state::<AppState>();
     let mut pro = state.pro.write().await;
+    info!("Attempting to restart daemon");
     return match pro.find_instance_mut(pro_id) {
         Some(pro_instance) => match pro_instance.daemon_mut() {
             Some(daemon) => {
-                info!("Attempting to restart daemon");
                 daemon.try_stop().await;
                 return StatusCode::OK.into_response();
             }
@@ -121,14 +134,11 @@ async fn daemon_proxy_handler(
     AxumState(server): AxumState<ServerState>,
     mut req: Request<Body>,
 ) -> impl IntoResponse {
-    let state = server.app_handle.state::<AppState>();
-    let pro = state.pro.read().await;
-    return match pro.find_instance(pro_id) {
-        Some(pro_instance) => match pro_instance.daemon() {
-            Some(daemon) => {
-                // strip `daemon-proxy/:pro_id` from path before we hand the request to the daemon
-                let original_query = req.uri().query();
-                let new_path_with_query = match original_query {
+    return match new_daemon_client(pro_id, server).await {
+        Some(client) => {
+            // strip `daemon-proxy/:pro_id` from path before we hand the request to the daemon
+            let original_query = req.uri().query();
+            let new_path_with_query = match original_query {
                     Some(query) => format!("/{}?{}", path, query),
                     None => format!("/{}", path),
                 };
@@ -137,13 +147,14 @@ async fn daemon_proxy_handler(
                 let new_uri = http::Uri::from_parts(parts).expect("Failed to build new URI");
                 *req.uri_mut() = new_uri;
 
-                return match daemon.proxy_request(req).await {
+                let original_path = req.uri().path_and_query().expect("Invalid path").to_string();
+                debug!("proxying daemon request: {}", original_path);
+
+                return match client.proxy(req).await {
                     Ok(res) => res.into_response(),
                     Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
                 };
             }
-            None => StatusCode::NOT_FOUND.into_response(),
-        },
         None => StatusCode::NOT_FOUND.into_response(),
     };
 }

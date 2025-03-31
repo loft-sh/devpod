@@ -42,9 +42,48 @@ export function ProInstance() {
     </Container>
   )
 
-  if (hasCapability(proInstance, "daemon") && connectionStatus.loginRequired) {
-    return loginContent
-  } else if (proInstance?.authenticated === false && connectionStatus.healthy) {
+  if (hasCapability(proInstance, "daemon")) {
+    if (connectionStatus.loginRequired) {
+      // we are not logged in, so we show the login content
+      return loginContent
+    } else if (!connectionStatus.online) {
+      // if the daemon is starting, we show a different message
+      if (connectionStatus.daemonState === "pending") {
+        return (
+          <Container maxW="container.lg" h="full">
+            <VStack align="center" justify="center" w="full" h="full">
+              <Image
+                src={colorMode == "dark" ? disconnectedDarkImage : disconnectedImage}
+                w="100%"
+                h="40vh"
+              />
+      
+              <Heading fontWeight="thin" mb="4" color="gray.600">
+                DevPod is connecting, please wait...
+              </Heading>
+            </VStack>
+          </Container>
+        )
+      }
+
+      // if the daemon is running but we are not online, something is wrong with networking
+      return (
+        <Container maxW="container.lg" h="full">
+          <VStack align="center" justify="center" w="full" h="full">
+            <Image
+              src={colorMode == "dark" ? disconnectedDarkImage : disconnectedImage}
+              w="100%"
+              h="40vh"
+            />
+    
+            <Heading fontWeight="thin" mb="4" color="gray.600">
+              DevPod cannot reach the platform
+            </Heading>
+          </VStack>
+        </Container>
+      )
+    }
+  } else if (!hasCapability(proInstance, "daemon") && proInstance?.authenticated === false && connectionStatus.healthy) {
     // TODO: This branch can be deprecated after removing proxy provider
     return loginContent
   }

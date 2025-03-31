@@ -41,6 +41,7 @@ type localServer struct {
 type Status struct {
 	State         DaemonState  `json:"state,omitempty"`
 	LoginRequired bool         `json:"loginRequired,omitempty"`
+	Online        bool         `json:"online,omitempty"`
 	Debug         *DebugStatus `json:"debug,omitempty"`
 }
 
@@ -209,8 +210,9 @@ func (l *localServer) status(w http.ResponseWriter, r *http.Request, params http
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	status := &Status{}
+
 	// overall state
+	status := &Status{}
 	switch st.BackendState {
 	case ipn.Starting.String():
 		status.State = DaemonStatePending
@@ -228,10 +230,13 @@ func (l *localServer) status(w http.ResponseWriter, r *http.Request, params http
 	}
 	l.platformStatus.mu.RUnlock()
 
+	// set online status
+	status.Online = st.Self != nil && st.Self.Online && st.Self.InNetworkMap
+
 	// debug info
-	self := l.pc.Self()
-	self.Status.AccessKey = "*********" // redact access key
 	if r.URL.Query().Has("debug") {
+		self := l.pc.Self()
+		self.Status.AccessKey = "*********" // redact access key
 		status.Debug = &DebugStatus{
 			Tailscale: st,
 			Self:      self,
