@@ -3,5 +3,6 @@ import type { DaemonState } from "./DaemonState"
 
 export interface DaemonStatus {
   state: DaemonState
+  online: boolean
   loginRequired: boolean
 }

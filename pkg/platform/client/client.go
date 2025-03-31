@@ -132,7 +132,7 @@ func (c *client) RefreshSelf(ctx context.Context) error {
 
 	c.self, err = managementClient.Loft().ManagementV1().Selves().Create(ctx, &managementv1.Self{}, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("get self: %w", err)
+		return fmt.Errorf("error trying to reach platform: %w. This usually indicates you either have no connection to the platform or are not authenticated", err)
 	}
 
 	projectNamespacePrefix := project.DefaultProjectNamespacePrefix

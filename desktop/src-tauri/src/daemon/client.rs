@@ -26,6 +26,10 @@ impl Client {
         return Client { socket };
     }
 
+    pub fn clone(&self) -> Client {
+        return Client { socket: self.socket.clone() };
+    }
+
     pub async fn status(&self) -> anyhow::Result<DaemonStatus> {
         let res = self.get::<DaemonStatus>("/status").await?;
         return Ok(res);

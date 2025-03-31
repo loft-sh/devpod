@@ -10,6 +10,7 @@ pub mod client;
 #[ts(export)]
 pub struct DaemonStatus {
     pub state: DaemonState,
+    pub online: bool,
     pub login_required: bool,
 }
 
