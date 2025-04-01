@@ -130,7 +130,7 @@ func cleanupLocalWorkspaces(ctx context.Context, devPodConfig *config.Config, wo
 			wg.Add(1)
 			go func(w provider.Workspace) {
 				defer wg.Done()
-				client, err := workspace.Get(ctx, devPodConfig, []string{w.ID}, true, owner, log)
+				client, err := workspace.Get(ctx, devPodConfig, []string{w.ID}, true, owner, false, log)
 				if err != nil {
 					log.Errorf("Failed to get workspace %s: %v", w.ID, err)
 					return

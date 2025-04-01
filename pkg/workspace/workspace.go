@@ -133,7 +133,7 @@ func getWorkspaceClient(devPodConfig *config.Config, provider *providerpkg.Provi
 }
 
 // Get tries to retrieve an already existing workspace
-func Get(ctx context.Context, devPodConfig *config.Config, args []string, changeLastUsed bool, owner platform.OwnerFilter, log log.Logger) (client.BaseWorkspaceClient, error) {
+func Get(ctx context.Context, devPodConfig *config.Config, args []string, changeLastUsed bool, owner platform.OwnerFilter, localOnly bool, log log.Logger) (client.BaseWorkspaceClient, error) {
 	var (
 		provider  *providerpkg.ProviderConfig
 		workspace *providerpkg.Workspace
@@ -148,7 +148,11 @@ func Get(ctx context.Context, devPodConfig *config.Config, args []string, change
 			return nil, err
 		}
 	} else {
-		workspace = findWorkspace(ctx, devPodConfig, args, "", owner, log)
+		if localOnly {
+			workspace = findLocalWorkspace(ctx, devPodConfig, args, "", log)
+		} else {
+			workspace = findWorkspace(ctx, devPodConfig, args, "", owner, log)
+		}
 		if workspace == nil {
 			return nil, fmt.Errorf("workspace %s doesn't exist", args[0])
 		}
@@ -468,9 +472,9 @@ func resolveWorkspaceConfig(
 	return workspace, nil
 }
 
-func findWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, workspaceID string, owner platform.OwnerFilter, log log.Logger) *providerpkg.Workspace {
+func ensureWorkspaceID(args []string, workspaceID string) string {
 	if len(args) == 0 && workspaceID == "" {
-		return nil
+		return ""
 	}
 
 	if workspaceID == "" {
@@ -479,6 +483,37 @@ func findWorkspace(ctx context.Context, devPodConfig *config.Config, args []stri
 
 		// convert to id
 		workspaceID = ToID(name)
+	}
+
+	return workspaceID
+}
+
+func findLocalWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, workspaceID string, log log.Logger) *providerpkg.Workspace {
+	workspaceID = ensureWorkspaceID(args, workspaceID)
+	if workspaceID == "" {
+		return nil
+	}
+
+	allWorkspaces, err := ListLocalWorkspaces(devPodConfig.DefaultContext, false, log)
+	if err != nil {
+		log.Debugf("failed to list workspaces: %v", err)
+		return nil
+	}
+
+	for _, workspace := range allWorkspaces {
+		if workspace.ID != workspaceID {
+			continue
+		}
+		return workspace
+	}
+
+	return nil
+}
+
+func findWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, workspaceID string, owner platform.OwnerFilter, log log.Logger) *providerpkg.Workspace {
+	workspaceID = ensureWorkspaceID(args, workspaceID)
+	if workspaceID == "" {
+		return nil
 	}
 
 	allWorkspaces, err := List(ctx, devPodConfig, false, owner, log)

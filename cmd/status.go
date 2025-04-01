@@ -47,7 +47,7 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 			}
 
 			logger := log.Default.ErrorStreamOnly()
-			client, err := workspace2.Get(ctx, devPodConfig, args, false, cmd.Owner, logger)
+			client, err := workspace2.Get(ctx, devPodConfig, args, false, cmd.Owner, false, logger)
 			if err != nil {
 				return err
 			}

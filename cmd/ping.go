@@ -43,7 +43,7 @@ func (cmd *PingCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	client, err := workspace2.Get(ctx, devPodConfig, args, true, cmd.Owner, log.Default.ErrorStreamOnly())
+	client, err := workspace2.Get(ctx, devPodConfig, args, true, cmd.Owner, false, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	}

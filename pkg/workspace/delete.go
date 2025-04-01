@@ -14,7 +14,7 @@ import (
 
 func Delete(ctx context.Context, devPodConfig *config.Config, args []string, ignoreNotFound, force bool, deleteOptions client2.DeleteOptions, owner platform.OwnerFilter, log log.Logger) (string, error) {
 	// try to load workspace
-	client, err := Get(ctx, devPodConfig, args, false, owner, log)
+	client, err := Get(ctx, devPodConfig, args, false, owner, false, log)
 	if err != nil {
 		if len(args) == 0 {
 			return "", fmt.Errorf("cannot delete workspace because there was an error loading the workspace: %w. Please specify the id of the workspace you want to delete. E.g. 'devpod delete my-workspace --force'", err)
