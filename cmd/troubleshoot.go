@@ -99,7 +99,7 @@ func (cmd *TroubleshootCmd) Run(ctx context.Context, args []string) {
 		info.Errors = append(info.Errors, PrintableError{fmt.Errorf("collect platform info: %w", err)})
 	}
 
-	workspaceClient, err := workspace.Get(ctx, info.Config, args, false, cmd.Owner, logger)
+	workspaceClient, err := workspace.Get(ctx, info.Config, args, false, cmd.Owner, false, logger)
 	if err == nil {
 		info.Workspace = workspaceClient.WorkspaceConfig()
 		info.WorkspaceStatus, err = workspaceClient.Status(ctx, client.StatusOptions{})
