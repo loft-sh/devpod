@@ -423,7 +423,38 @@ type DevPodWorkspaceVolumeClaimTemplate struct {
 	// +optional
 	TemplateMetadata `json:"metadata,omitempty"`
 
-	Spec corev1.PersistentVolumeClaimSpec `json:"spec,omitempty"`
+	Spec DevPodWorkspaceVolumeClaimSpec `json:"spec,omitempty"`
+}
+
+type DevPodWorkspaceVolumeClaimSpec struct {
+	// accessModes contains the desired access modes the volume should have.
+	// +optional
+	// +listType=atomic
+	AccessModes []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
+	// selector is a label query over volumes to consider for binding.
+	// +optional
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
+	// resources represents the minimum resources the volume should have.
+	// +optional
+	Resources DevPodWorkspaceResourceRequirements `json:"resources,omitempty"`
+	// volumeName is the binding reference to the PersistentVolume backing this claim.
+	// +optional
+	VolumeName string `json:"volumeName,omitempty"`
+	// storageClassName is the name of the StorageClass required by the claim.
+	// +optional
+	StorageClassName *string `json:"storageClassName,omitempty"`
+	// volumeMode defines what type of volume is required by the claim.
+	// +optional
+	VolumeMode *corev1.PersistentVolumeMode `json:"volumeMode,omitempty"`
+	// dataSource field can be used to specify either:
+	// +optional
+	DataSource *corev1.TypedLocalObjectReference `json:"dataSource,omitempty"`
+	// dataSourceRef specifies the object from which to populate the volume with data, if a non-empty
+	// +optional
+	DataSourceRef *corev1.TypedObjectReference `json:"dataSourceRef,omitempty"`
+	// volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
+	// +optional
+	VolumeAttributesClassName *string `json:"volumeAttributesClassName,omitempty"`
 }
 
 // +enum

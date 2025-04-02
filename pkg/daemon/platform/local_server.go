@@ -474,14 +474,13 @@ func (l *localServer) watchWorkspaces(w http.ResponseWriter, r *http.Request, pa
 		PlatformClient: l.pc,
 		TsClient:       l.lc,
 		Log:            l.log},
+		// we need to debounce events here to avoid spamming the client with too many events
 		throttle(func(instanceList []*ProWorkspaceInstance) {
 			if r.Context().Err() != nil {
 				return // Client disconnected, stop trying to write
 			}
 
-			// we need to debounce events here to avoid spamming the client with too many events
 			if instanceList != nil {
-				l.log.Infof("writing workspace list to client")
 				err := enc.Encode(instanceList)
 				if err != nil {
 					http.Error(w, "decode workspace list", http.StatusInternalServerError)
