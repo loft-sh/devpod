@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/command"
@@ -329,7 +330,11 @@ func CloneRepositoryForWorkspace(
 		defer conn.Close()
 
 		// Set up a connection to the server.
-		grpcClient, err := grpc.NewClient("unix://"+options.Platform.RunnerSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		grpcClient, err := grpc.NewClient(
+			"unix://"+options.Platform.RunnerSocket,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithIdleTimeout(180*time.Minute), // cloning can take a long time for large monorepos
+		)
 		if err != nil {
 			return fmt.Errorf("create platform gitcache client: %w", err)
 		}
