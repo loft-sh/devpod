@@ -10,7 +10,7 @@ import {
   GitCommit,
   GitPR,
   GitSubPath,
-  Pause,
+  Stop,
   Trash,
 } from "@/icons"
 import { getDisplayName, getIDEDisplayName } from "@/lib"
@@ -267,7 +267,7 @@ export function Controls({
         />
         <Portal>
           <MenuList mr="4">
-            <MenuItem isDisabled={false} onClick={onStopClicked} icon={<Pause boxSize={4} />}>
+            <MenuItem isDisabled={false} onClick={onStopClicked} icon={<Stop boxSize={4} />}>
               Stop...
             </MenuItem>
             <MenuItem
