@@ -66,14 +66,31 @@ func (f *Framework) ExecCommand(ctx context.Context, captureStdOut, searchForStr
 
 // ExecCommandCapture executes the command string with the devpod test binary, and returns stdout, stderr, and any error that occurred.
 func (f *Framework) ExecCommandCapture(ctx context.Context, args []string) (string, string, error) {
-	var execOut bytes.Buffer
-	var execErr bytes.Buffer
+	var execOut, execErr bytes.Buffer
 
-	cmd := exec.CommandContext(ctx, filepath.Join(f.DevpodBinDir, f.DevpodBinName), args...)
-	cmd.Stdout = io.MultiWriter(os.Stdout, &execOut)
-	cmd.Stderr = io.MultiWriter(os.Stderr, &execErr)
-	cmd.Dir = os.TempDir()
+	// Helper to run the command with an optional override dir
+	run := func(overrideDir string) (string, string, error) {
+		execOut.Reset()
+		execErr.Reset()
 
-	err := cmd.Run()
-	return execOut.String(), execErr.String(), err
+		cmd := exec.CommandContext(ctx, filepath.Join(f.DevpodBinDir, f.DevpodBinName), args...)
+		cmd.Stdout = io.MultiWriter(os.Stdout, &execOut)
+		cmd.Stderr = io.MultiWriter(os.Stderr, &execErr)
+		if overrideDir != "" {
+			cmd.Dir = overrideDir
+		}
+
+		err := cmd.Run()
+		return execOut.String(), execErr.String(), err
+	}
+
+	stdout, stderr, err := run("") // try without override
+	if err != nil {
+		// Check for getwd-related error (some implementations return "no such file or directory" or similar)
+		if strings.Contains(err.Error(), "getwd") || strings.Contains(err.Error(), "no such file or directory") {
+			return run(os.TempDir()) // retry in a safe location
+		}
+	}
+
+	return stdout, stderr, err
 }
