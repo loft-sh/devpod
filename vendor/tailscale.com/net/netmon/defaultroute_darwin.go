@@ -6,10 +6,18 @@
 package netmon
 
 import (
+	"bytes"
+	"fmt"
 	"log"
 	"net"
+	"os/exec"
+	"strings"
 
 	"tailscale.com/syncs"
+)
+
+const (
+	LOFT_ADMIN_HOST = "admin.loft.sh"
 )
 
 var (
@@ -25,6 +33,66 @@ func UpdateLastKnownDefaultRouteInterface(ifName string) {
 	if old := lastKnownDefaultRouteIfName.Swap(ifName); old != ifName {
 		log.Printf("defaultroute_darwin: update from Swift, ifName = %s (was %s)", ifName, old)
 	}
+}
+
+// resolveHostname resolves net.IP of given hostname
+func resolveHostname(hostname string) (net.IP, error) {
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prefer IPv4 addresses
+	for _, ip := range ips {
+		if ipv4 := ip.To4(); ipv4 != nil {
+			return ipv4, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no IPv4 address found for %s", hostname)
+}
+
+// interfaceTo returns string name of network interface used to reach target IP
+func interfaceTo(ip net.IP) (string, error) {
+	cmd := exec.Command("route", "get", ip.String())
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+
+	lines := strings.Split(out.String(), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "interface:") {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				return parts[1], nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("interface to %s not found", ip)
+}
+
+// getInterfaceByRoute gets default interface by checking route to specific host
+func getInterfaceByRoute(host string) (*net.Interface, error) {
+	ip, err := resolveHostname(host)
+	if err != nil {
+		return nil, err
+	}
+
+	ifaceName, err := interfaceTo(ip)
+	if err != nil {
+		return nil, err
+	}
+
+	intf, err := net.InterfaceByName(ifaceName)
+	if err != nil {
+		return nil, err
+	}
+
+	return intf, nil
 }
 
 func defaultRoute() (d DefaultRouteDetails, err error) {
@@ -69,6 +137,16 @@ func defaultRoute() (d DefaultRouteDetails, err error) {
 		return nil
 	}
 
+	// Try to get interface by running route against Loft admin
+	iface, err := getInterfaceByRoute(LOFT_ADMIN_HOST)
+	if err == nil {
+		d.InterfaceIndex = iface.Index
+		d.InterfaceName = iface.Name
+		return d, nil
+	}
+
+	// If that fails (like in air-gapped environments) fallback to default TS logic
+
 	// Did Swift set lastKnownDefaultRouteInterface? If so, we should use it and don't bother
 	// with anything else. However, for sanity, do check whether Swift gave us with an interface
 	// that exists, is up, and has an address.
@@ -86,7 +164,7 @@ func defaultRoute() (d DefaultRouteDetails, err error) {
 	if err != nil {
 		return d, err
 	}
-	iface, err := net.InterfaceByIndex(idx)
+	iface, err = net.InterfaceByIndex(idx)
 	if err != nil {
 		return d, err
 	}
