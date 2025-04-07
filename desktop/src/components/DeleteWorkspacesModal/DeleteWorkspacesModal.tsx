@@ -18,17 +18,19 @@ export function DeleteWorkspacesModal({
   onCloseRequested,
   amount,
   isOpen,
+  pro = false,
 }: {
   isOpen: boolean
   onCloseRequested: () => void
   onDeleteRequested: (forceDelete: boolean) => void
   amount: number
+  pro?: boolean
 }) {
   const [forceDelete, setForceDelete] = useState(false)
 
   const onDeleteClick = useCallback(() => {
     onCloseRequested()
-    onDeleteRequested(forceDelete)
+    onDeleteRequested(pro ? true : forceDelete)
   }, [forceDelete, onDeleteRequested, onCloseRequested])
 
   const onForceDeleteChanged = useCallback(
@@ -47,11 +49,13 @@ export function DeleteWorkspacesModal({
         <ModalBody>
           Deleting the workspaces will erase all state. Are you sure you want to delete the selected
           workspaces?
-          <Box marginTop={"2.5"}>
-            <Checkbox checked={forceDelete} onChange={onForceDeleteChanged}>
-              Force Delete
-            </Checkbox>
-          </Box>
+          {!pro && (
+            <Box marginTop={"2.5"}>
+              <Checkbox checked={forceDelete} onChange={onForceDeleteChanged}>
+                Force Delete
+              </Checkbox>
+            </Box>
+          )}
         </ModalBody>
         <ModalFooter>
           <HStack spacing={"2"}>

@@ -88,21 +88,18 @@ export function ListWorkspaces() {
     selection.prune(instanceIDs)
   }, [instanceIDs, selection])
 
-  const handleDeleteAllClicked = useCallback(
-    (forceDelete: boolean) => {
-      const allSelected = instances.filter((workspace) => selection.has(workspace.id))
-      for (const w of allSelected) {
-        removeWorkspaceAction({
-          workspaceID: w.id,
-          streamID: viewID,
-          force: forceDelete,
-          store,
-        })
-      }
-      selection.clear()
-    },
-    [selection, instances, viewID, store]
-  )
+  const handleDeleteAllClicked = useCallback(() => {
+    const allSelected = instances.filter((workspace) => selection.has(workspace.id))
+    for (const w of allSelected) {
+      removeWorkspaceAction({
+        workspaceID: w.id,
+        streamID: viewID,
+        force: true,
+        store,
+      })
+    }
+    selection.clear()
+  }, [selection, instances, viewID, store])
 
   const stopAll = useCallback(() => {
     const allSelected = instances.filter((workspace) => selection.has(workspace.id))
@@ -238,6 +235,7 @@ export function ListWorkspaces() {
       </VStack>
 
       <DeleteWorkspacesModal
+        pro
         isOpen={isDeleteOpen}
         onCloseRequested={onDeleteClose}
         onDeleteRequested={handleDeleteAllClicked}
