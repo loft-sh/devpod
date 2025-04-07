@@ -200,11 +200,46 @@ function ActionTerminal({ actionID }: TActionTerminalProps) {
   } = useStreamingTerminal({ searchOptions, borderRadius: "none" })
 
   useEffect(() => {
+    if (!action) return
+
+    let isActive = true
     clearTerminal()
 
-    return action?.connectOrReplay((e) => {
-      connectStream(e)
+    // Create a new subscription with a delay for replay
+    const setupStream = async () => {
+      if (action.data.status === "pending") {
+        // For pending actions, subscribe immediately
+        return action.connectOrReplay((e) => {
+          if (isActive) {
+            connectStream(e)
+          }
+        })
+      } else {
+        // For completed actions, add a small delay to ensure cleanup
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        if (!isActive) return () => {}
+
+        return action.connectOrReplay((e) => {
+          if (isActive) {
+            connectStream(e)
+          }
+        })
+      }
+    }
+
+    let cleanup: VoidFunction | void
+    setupStream().then((unsubscribe) => {
+      if (isActive) {
+        cleanup = unsubscribe
+      } else {
+        unsubscribe?.()
+      }
     })
+
+    return () => {
+      isActive = false
+      cleanup?.()
+    }
   }, [action, clearTerminal, connectStream])
 
   return (
