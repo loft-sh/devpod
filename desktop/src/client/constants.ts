@@ -69,3 +69,4 @@ export const DEVPOD_FLAG_GIT_SIGNING_KEY = "--git-ssh-signing-key"
 export const DEVPOD_FLAG_FORCE_BROWSER = "--force-browser"
 
 export const DEVPOD_UI_ENV_VAR = "DEVPOD_UI"
+export const DEVPOD_ADDITIONAL_ENV_VARS = "DEVPOD_ADDITIONAL_ENV_VARS"
