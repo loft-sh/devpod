@@ -19,6 +19,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
+	"k8s.io/klog/v2"
 )
 
 func (r *runner) build(
@@ -376,8 +377,10 @@ func dockerlessFallback(
 	dockerfileContent string,
 	options provider.BuildOptions,
 ) (*config.BuildInfo, error) {
+	klog.Infof("YEAH we at least here?")
 	contextPath := config.GetContextPath(parsedConfig.Config)
 	devPodInternalFolder := filepath.Join(contextPath, config.DevPodContextFeatureFolder)
+	klog.Infof("We created devpodInternalFolder on path %s", devPodInternalFolder)
 	err := os.MkdirAll(devPodInternalFolder, 0755)
 	if err != nil {
 		return nil, fmt.Errorf("create devpod folder: %w", err)
