@@ -56,16 +56,16 @@ func (cmd *GitCredentialsCmd) Run(ctx context.Context, args []string, log log.Lo
 		return err
 	}
 
-	credentials, err := gitcredentials.Parse(string(raw))
+	credentialsReq, err := gitcredentials.Parse(string(raw))
 	if err != nil {
 		return err
 	}
 
 	// try to get the credentials from the workspace server first
-	credentials = getCredentialsFromWorkspaceServer(credentials)
+	credentials := getCredentialsFromWorkspaceServer(credentialsReq)
 	if credentials == nil && cmd.Port != 0 {
 		// try to get the credentials from the local machine
-		credentials = getCredentialsFromLocalMachine(credentials, cmd.Port)
+		credentials = getCredentialsFromLocalMachine(credentialsReq, cmd.Port)
 	}
 
 	// if we still don't have credentials, just return nothing
