@@ -90,35 +90,35 @@ func (o *RStudioServer) Install() error {
 	// Skip if already installed
 	if command.ExistsForUser("rstudio-server", o.userName) {
 		o.log.Debug("RStudio is already installed, skipping installation")
-	} else {
-		o.log.Info("Installing RStudio")
+		return nil
+	}
+	o.log.Info("Installing RStudio")
 
-		err := ensureGdebi(o.log)
+	err := ensureGdebi(o.log)
+	if err != nil {
+		return err
+	}
+
+	// Check if local file exists
+	if _, err := os.Stat(debPath); os.IsNotExist(err) {
+		o.log.Info("Rstudio deb not file, downloading ...")
+		codename, err := getDistroCodename(o.log)
 		if err != nil {
 			return err
 		}
 
-		// Check if local file exists
-		if _, err := os.Stat(debPath); os.IsNotExist(err) {
-			o.log.Info("Rstudio deb not file, downloading ...")
-			codename, err := getDistroCodename(o.log)
-			if err != nil {
-				return err
-			}
-
-			debPath, err = downloadRStudioDeb(codename, o.log)
-			if err != nil {
-				return err
-			}
-		}
-
-		err = installDeb(debPath, o.log)
+		debPath, err = downloadRStudioDeb(codename, o.log)
 		if err != nil {
 			return err
 		}
 	}
 
-	err := ensureConfigFolder(o.userName)
+	err = installDeb(debPath, o.log)
+	if err != nil {
+		return err
+	}
+
+	err = ensureConfigFolder(o.userName)
 	if err != nil {
 		return err
 	}
