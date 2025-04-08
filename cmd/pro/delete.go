@@ -74,7 +74,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	// stop daemon and clean up local workspaces
 	if providerConfig.IsDaemonProvider() {
 		// clean up local workspaces
-		workspaces, err := workspace.List(ctx, devPodConfig, true, cmd.Owner, log.Default)
+		workspaces, err := workspace.ListLocalWorkspaces(devPodConfig.DefaultContext, false, log.Default)
 		if err != nil {
 			log.Default.Warnf("Failed to list workspaces: %v", err)
 		} else {
@@ -130,7 +130,7 @@ func cleanupLocalWorkspaces(ctx context.Context, devPodConfig *config.Config, wo
 			wg.Add(1)
 			go func(w provider.Workspace) {
 				defer wg.Done()
-				client, err := workspace.Get(ctx, devPodConfig, []string{w.ID}, true, owner, false, log)
+				client, err := workspace.Get(ctx, devPodConfig, []string{w.ID}, true, owner, true, log)
 				if err != nil {
 					log.Errorf("Failed to get workspace %s: %v", w.ID, err)
 					return
@@ -138,14 +138,14 @@ func cleanupLocalWorkspaces(ctx context.Context, devPodConfig *config.Config, wo
 				// delete workspace folder
 				err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, client.Workspace(), client.WorkspaceConfig().SSHConfigPath, log)
 				if err != nil {
-					log.Errorf("Failed to delete workspace %s: %v", w.ID, err)
+					log.Errorf("Failed to remove workspace %s: %v", w.ID, err)
 					return
 				}
-				log.Donef("Successfully deleted workspace %s", w.ID)
+				log.Donef("Successfully removed workspace %s", w.ID)
 			}(*w)
 		}
 
-		log.Infof("Waiting for %d workspaces to be deleted", len(usedWorkspaces))
+		log.Infof("Waiting for %d workspace(s) to be removed locally", len(usedWorkspaces))
 		wg.Wait()
 	}
 }
