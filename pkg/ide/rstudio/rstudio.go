@@ -81,39 +81,44 @@ type RStudioServer struct {
 var codenameRegEx = regexp.MustCompile(`\nUBUNTU_CODENAME=(.*)\n`)
 
 func (o *RStudioServer) Install() error {
-	// Skip if already installed
-	if command.ExistsForUser("rstudio-server", o.userName) {
-		o.log.Debug("RStudio is already installed, skipping installation")
-		return nil
-	}
-
+	debPath := filepath.Join(filepath.ToSlash(downloadFolder), "rstudio-server.deb")
 	// R has to be installed
 	if !command.ExistsForUser("R", o.userName) {
 		return fmt.Errorf("R has to be available in image to use RStudio") //nolint:all
 	}
-	o.log.Info("Installing RStudio")
 
-	err := ensureGdebi(o.log)
-	if err != nil {
-		return err
+	// Skip if already installed
+	if command.ExistsForUser("rstudio-server", o.userName) {
+		o.log.Debug("RStudio is already installed, skipping installation")
+	} else {
+		o.log.Info("Installing RStudio")
+
+		err := ensureGdebi(o.log)
+		if err != nil {
+			return err
+		}
+
+		// Check if local file exists
+		if _, err := os.Stat(debPath); os.IsNotExist(err) {
+			o.log.Info("Rstudio deb not file, downloading ...")
+			codename, err := getDistroCodename(o.log)
+			if err != nil {
+				return err
+			}
+
+			debPath, err = downloadRStudioDeb(codename, o.log)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = installDeb(debPath, o.log)
+		if err != nil {
+			return err
+		}
 	}
 
-	codename, err := getDistroCodename(o.log)
-	if err != nil {
-		return nil
-	}
-
-	debPath, err := downloadRStudioDeb(codename, o.log)
-	if err != nil {
-		return nil
-	}
-
-	err = installDeb(debPath, o.log)
-	if err != nil {
-		return err
-	}
-
-	err = ensureConfigFolder(o.userName)
+	err := ensureConfigFolder(o.userName)
 	if err != nil {
 		return err
 	}
