@@ -95,7 +95,9 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
         user_local_bin.push(".local/bin/devpod");
 
         // create .local/bin if necessary
-        fs::create_dir_all(user_local_bin.clone().parent().unwrap()).unwrap();
+        if let Some(path) = user_local_bin.clone().parent() {
+            fs::create_dir_all(path);
+        }
 
         target_paths.push(user_local_bin);
         target_paths.push(user_bin);
