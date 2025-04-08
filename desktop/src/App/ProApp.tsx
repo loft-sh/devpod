@@ -188,7 +188,11 @@ function ConnectionStatus({ status }: TConnectionStatusProps) {
 
   const content = (
     <HStack gap="1">
-      <Box boxSize="2" bg={status.healthy ? "green.400" : "red.400"} rounded="full" />
+      <Box
+        boxSize="2"
+        bg={status.healthy && status.online ? "green.400" : "red.400"}
+        rounded="full"
+      />
       <Text color="gray.600" _dark={{ color: "gray.400" }} textTransform="capitalize">
         {status.healthy ? "Connected" : "Disconnected"}
       </Text>

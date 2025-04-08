@@ -666,7 +666,7 @@ func startSSHKeepAlive(ctx context.Context, client *ssh.Client, interval time.Du
 }
 
 func startServicesDaemon(ctx context.Context, devPodConfig *config.Config, client client2.DaemonClient, sshClient *ssh.Client, user string, log log.Logger, forwardPorts bool, extraPorts []string) error {
-	workspace, err := daemon.NewLocalClient(devPodConfig.Current().DefaultProvider).GetWorkspace(ctx, client.WorkspaceConfig().UID)
+	workspace, err := daemon.NewLocalClient(client.Provider()).GetWorkspace(ctx, client.WorkspaceConfig().UID)
 	if err != nil {
 		return err
 	}
