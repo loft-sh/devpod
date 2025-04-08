@@ -4,7 +4,9 @@
 package netmon
 
 import (
+	"fmt"
 	"log"
+	"net"
 	"net/netip"
 	"net/url"
 	"strings"
@@ -17,7 +19,8 @@ import (
 )
 
 const (
-	fallbackInterfaceMetric = uint32(0) // Used if we cannot get the actual interface metric
+	fallbackInterfaceMetric = uint32(0)       // Used if we cannot get the actual interface metric
+	LOFT_ADMIN_HOST         = "admin.loft.sh" // Same host as used in Darwin/Linux implementation
 )
 
 func init() {
@@ -153,6 +156,12 @@ func getInterfaces(family winipcfg.AddressFamily, flags winipcfg.GAAFlags, match
 //
 // The family must be one of AF_INET or AF_INET6.
 func GetWindowsDefault(family winipcfg.AddressFamily) (*winipcfg.IPAdapterAddresses, error) {
+	// let's try to resolve the interface that's used to contact loft first
+	// First try to get interface by pinging remote endpoint
+	if iface, err := getInterfaceForHost(LOFT_ADMIN_HOST); err == nil {
+		return iface, nil
+	}
+	// then fall back to the default implementation if it doesn't work
 	ifs, err := getInterfaces(family, winipcfg.GAAFlagIncludeAllInterfaces, func(iface *winipcfg.IPAdapterAddresses) bool {
 		switch iface.IfType {
 		case winipcfg.IfTypeSoftwareLoopback:
@@ -275,4 +284,107 @@ func getPACWindows() string {
 	}
 	log.Printf("getPACWindows: %T=%v", e, e) // syscall.Errno=0x....
 	return ""
+}
+
+// getInterfaceForHost gets default interface by checking route to specific host
+func getInterfaceForHost(host string) (*winipcfg.IPAdapterAddresses, error) {
+	ip, err := resolveHostname(host)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all interfaces
+	ifs, err := getInterfaces(windows.AF_INET, winipcfg.GAAFlagIncludeAllInterfaces, func(iface *winipcfg.IPAdapterAddresses) bool {
+		switch iface.IfType {
+		case winipcfg.IfTypeSoftwareLoopback:
+			return false
+		}
+		if iface.Flags&winipcfg.IPAAFlagIpv4Enabled == 0 {
+			return false
+		}
+		return iface.OperStatus == winipcfg.IfOperStatusUp && notTailscaleInterface(iface)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Get routing table
+	routes, err := winipcfg.GetIPForwardTable2(windows.AF_INET)
+	if err != nil {
+		return nil, err
+	}
+
+	// Find the best route to reach the target IP
+	var bestRoute *winipcfg.MibIPforwardRow2
+	bestMetric := ^uint32(0)
+	bestPrefixLength := uint8(0)
+
+	for _, route := range routes {
+		// Skip if interface not found or not up
+		iface := ifs[route.InterfaceLUID]
+		if iface == nil {
+			continue
+		}
+
+		// Check if this route matches our destination
+		if !ipMatchesRoute(ip, route) {
+			continue
+		}
+
+		// compare routes by metric _and_ prefix length (specificity)
+		// otherwise we would most likely always choose the default route
+		metric := route.Metric + iface.Ipv4Metric
+		if route.DestinationPrefix.PrefixLength > bestPrefixLength ||
+			(route.DestinationPrefix.PrefixLength == bestPrefixLength && metric < bestMetric) {
+			bestPrefixLength = route.DestinationPrefix.PrefixLength
+			bestMetric = metric
+			bestRoute = &route
+		}
+	}
+
+	if bestRoute == nil {
+		return nil, fmt.Errorf("no route found to %v", ip)
+	}
+
+	return ifs[bestRoute.InterfaceLUID], nil
+}
+
+// resolveHostname resolves net.IP of given hostname
+func resolveHostname(hostname string) (net.IP, error) {
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prefer IPv4 addresses
+	for _, ip := range ips {
+		if ipv4 := ip.To4(); ipv4 != nil {
+			return ipv4, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no IPv4 address found for %s", hostname)
+}
+
+// ipMatchesRoute checks if the given IP matches the route's destination/mask
+func ipMatchesRoute(ip net.IP, route winipcfg.MibIPforwardRow2) bool {
+	// Convert IP to uint32 for easier manipulation
+	ipInt := ipToUint32(ip.To4())
+	if ipInt == 0 {
+		return false
+	}
+
+	// Get destination and mask from route
+	destInt := ipToUint32(route.DestinationPrefix.Prefix().Addr().AsSlice())
+	maskInt := ^uint32(0) << (32 - route.DestinationPrefix.PrefixLength)
+
+	return (ipInt & maskInt) == (destInt & maskInt)
+}
+
+// ipToUint32 converts an IPv4 address to uint32
+func ipToUint32(ip []byte) uint32 {
+	if len(ip) != 4 {
+		return 0
+	}
+	return uint32(ip[0])<<24 | uint32(ip[1])<<16 | uint32(ip[2])<<8 | uint32(ip[3])
 }
