@@ -436,8 +436,8 @@ github.com/loft-sh/programming-language-detection v0.0.5 h1:XiWlxtrf4t6Z7SQiob0J
 github.com/loft-sh/programming-language-detection v0.0.5/go.mod h1:QGPQGKr9q1+rQS4OyisS5CPGY1a76SdNaZuk9oy+2cE=
 github.com/loft-sh/ssh v0.0.5 h1:CmLfBrbekAZmYhpS+urhqmUZW1XU9kUo2bi4lJiUFH8=
 github.com/loft-sh/ssh v0.0.5/go.mod h1:jgAfPSNioyL2wdFesXY5Wi4pYpdNo4u7AzworofHeyU=
-github.com/loft-sh/tailscale v1.78.1-loft.7 h1:beJXAZU+KHOo1/kxSXgGySBvl5oz8D5W1nlAFpSwyo0=
-github.com/loft-sh/tailscale v1.78.1-loft.7/go.mod h1:u/vvqy1cqBer179jxNgPN3qN8YBMGzw+5bPo66z6yHo=
+github.com/loft-sh/tailscale v1.78.1-loft.7.0.20250408101921-05667cb081fd h1:pt2Gkw0DE8Ve4brM9X3vfeI3sPjzipCl2expB0ixVmw=
+github.com/loft-sh/tailscale v1.78.1-loft.7.0.20250408101921-05667cb081fd/go.mod h1:u/vvqy1cqBer179jxNgPN3qN8YBMGzw+5bPo66z6yHo=
 github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69Aj6K7nkY=
 github.com/lucasb-eyer/go-colorful v1.2.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=

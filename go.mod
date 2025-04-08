@@ -334,4 +334,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace tailscale.com => github.com/loft-sh/tailscale v1.78.1-loft.7
+replace tailscale.com => github.com/loft-sh/tailscale v1.78.1-loft.7.0.20250408101921-05667cb081fd
