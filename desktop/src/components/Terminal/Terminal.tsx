@@ -73,11 +73,9 @@ export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T(
       })
       terminalRef.current = terminal
 
-      terminal.onKey((key) => {
-        if (terminal.hasSelection() && key.domEvent.ctrlKey && key.domEvent.key === "c") {
-          document.execCommand("copy")
-        }
-      })
+      terminal.attachCustomKeyEventHandler(event => {
+        return !(event.type === "keydown" && event.key === "c" && event.ctrlKey);
+      });
 
       const loadAddon = <T extends ITerminalAddon>(
         AddonClass: new () => T,
