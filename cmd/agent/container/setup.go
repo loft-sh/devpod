@@ -460,7 +460,10 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, ide *provider
 	case string(config2.IDEJupyterNotebook):
 		return jupyter.NewJupyterNotebookServer(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDERStudio):
-		return rstudio.NewRStudioServer(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, config.GetRemoteUser(setupInfo), ide.Options, log).Install()
+		err := rstudio.NewRStudioServer(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, config.GetRemoteUser(setupInfo), ide.Options, log).Install()
+		if err != nil {
+			log.Errorf("could not install rstudio with error: %w", err)
+		}
 	}
 
 	return nil
