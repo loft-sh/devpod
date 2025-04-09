@@ -7,7 +7,7 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
-	agentdaemon "github.com/loft-sh/devpod/pkg/daemon/agent"
+	workspaced "github.com/loft-sh/devpod/pkg/daemon/workspace"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -101,7 +101,7 @@ func removeDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) e
 	}
 
 	log.Debugf("Removing DevPod daemon from server...")
-	err := agentdaemon.RemoveDaemon()
+	err := workspaced.RemoveDaemon()
 	if err != nil {
 		return errors.Wrap(err, "remove daemon")
 	}

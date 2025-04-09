@@ -1,6 +1,6 @@
 //go:build !linux
 // +build !linux
 
-package agent
+package workspace
 
 func RunProcessReaper() {}
