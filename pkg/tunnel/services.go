@@ -43,6 +43,7 @@ func RunServices(
 	platformOptions *devpod.PlatformOptions,
 	workspace *provider.Workspace,
 	configureDockerCredentials, configureGitCredentials, configureGitSSHSignatureHelper bool,
+	client string,
 	log log.Logger,
 ) error {
 	// calculate exit after timeout
@@ -114,6 +115,11 @@ func RunServices(
 		defer writer.Close()
 
 		command := fmt.Sprintf("'%s' agent container credentials-server --user '%s'", agent.ContainerDevPodHelperLocation, user)
+
+		if client != "" {
+			command += fmt.Sprintf(" --client '%s'", client)
+		}
+
 		if configureGitCredentials {
 			command += " --configure-git-helper"
 		}

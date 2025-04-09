@@ -22,12 +22,13 @@ func RunCredentialsServer(
 	ctx context.Context,
 	port int,
 	client tunnel.TunnelClient,
+	clientHost string,
 	log log.Logger,
 ) error {
 	var handler http.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		log.Debugf("Incoming client connection at %s", request.URL.Path)
 		if request.URL.Path == "/git-credentials" {
-			err := handleGitCredentialsRequest(ctx, writer, request, client, log)
+			err := handleGitCredentialsRequest(ctx, writer, request, client, clientHost, log)
 			if err != nil {
 				http.Error(writer, err.Error(), http.StatusInternalServerError)
 				return
@@ -110,7 +111,10 @@ func handleDockerCredentialsRequest(ctx context.Context, writer http.ResponseWri
 	return nil
 }
 
-func handleGitCredentialsRequest(ctx context.Context, writer http.ResponseWriter, request *http.Request, client tunnel.TunnelClient, log log.Logger) error {
+func handleGitCredentialsRequest(ctx context.Context, writer http.ResponseWriter, request *http.Request, client tunnel.TunnelClient, clientHost string, log log.Logger) error {
+	if clientHost != "" {
+		return handleGitCredentialsOverTSNet(ctx, writer, request, clientHost, log)
+	}
 	out, err := io.ReadAll(request.Body)
 	if err != nil {
 		return errors.Wrap(err, "read request body")
@@ -127,6 +131,18 @@ func handleGitCredentialsRequest(ctx context.Context, writer http.ResponseWriter
 	writer.WriteHeader(http.StatusOK)
 	_, _ = writer.Write([]byte(response.Message))
 	log.Debugf("Successfully wrote back %d bytes", len(response.Message))
+	return nil
+}
+
+func handleGitCredentialsOverTSNet(ctx context.Context, writer http.ResponseWriter, request *http.Request, clientHost string, log log.Logger) error {
+	out, err := io.ReadAll(request.Body)
+	if err != nil {
+		return errors.Wrap(err, "read request body")
+	}
+	log.Debugf("Received git credentials post data: %s", string(out))
+
+	// TODO: implement this
+
 	return nil
 }
 
