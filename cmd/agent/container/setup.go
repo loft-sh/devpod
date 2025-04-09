@@ -433,6 +433,8 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, ide *provider
 		return cmd.setupVSCode(setupInfo, ide.Options, vscode.FlavorPositron, log)
 	case string(config2.IDECodium):
 		return cmd.setupVSCode(setupInfo, ide.Options, vscode.FlavorCodium, log)
+	case string(config2.IDEWindsurf):
+		return cmd.setupVSCode(setupInfo, ide.Options, vscode.FlavorWindsurf, log)
 	case string(config2.IDEOpenVSCode):
 		return cmd.setupOpenVSCode(setupInfo, ide.Options, log)
 	case string(config2.IDEGoland):

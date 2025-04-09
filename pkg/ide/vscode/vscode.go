@@ -31,6 +31,7 @@ const (
 	FlavorCursor   Flavor = "cursor"
 	FlavorPositron Flavor = "positron"
 	FlavorCodium   Flavor = "codium"
+	FlavorWindsurf Flavor = "windsurf"
 )
 
 func (f Flavor) DisplayName() string {
@@ -45,6 +46,8 @@ func (f Flavor) DisplayName() string {
 		return "positron"
 	case FlavorCodium:
 		return "VSCodium"
+	case FlavorWindsurf:
+		return "Windsurf"
 	default:
 		return "VSCode"
 	}
@@ -456,6 +459,8 @@ func prepareServerLocation(userName string, create bool, flavor Flavor) (string,
 		folderName = ".positron-server"
 	case FlavorCodium:
 		folderName = ".vscodium-server"
+	case FlavorWindsurf:
+		folderName = ".windsurf-server"
 	}
 
 	folder := filepath.Join(homeFolder, folderName)

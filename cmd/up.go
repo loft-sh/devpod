@@ -268,6 +268,15 @@ func (cmd *UpCmd) Run(
 				vscode.FlavorPositron,
 				log,
 			)
+		case string(config.IDEWindsurf):
+			return vscode.Open(
+				ctx,
+				client.Workspace(),
+				result.SubstitutionContext.ContainerWorkspaceFolder,
+				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
+				vscode.FlavorWindsurf,
+				log,
+			)
 		case string(config.IDEOpenVSCode):
 			return startVSCodeInBrowser(
 				cmd.GPGAgentForwarding,

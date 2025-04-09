@@ -24,6 +24,7 @@ const (
 	IDECodium          IDE = "codium"
 	IDEZed             IDE = "zed"
 	IDERStudio         IDE = "rstudio"
+	IDEWindsurf        IDE = "windsurf"
 )
 
 type IDEGroup string

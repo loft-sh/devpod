@@ -41,6 +41,10 @@ func openViaBrowser(workspace, folder string, newWindow bool, flavor Flavor, log
 		protocol = `positron://`
 	case FlavorCodium:
 		protocol = `codium://`
+	case FlavorWindsurf:
+		protocol = `windsurf://`
+	default:
+		return fmt.Errorf("unknown flavor %s", flavor)
 	}
 
 	openURL := protocol + `vscode-remote/ssh-remote+` + workspace + `.devpod/` + folder
@@ -164,6 +168,16 @@ func findCLI(flavor Flavor) string {
 			return "codium"
 		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Codium.app/Contents/Resources/app/bin/codium") {
 			return "/Applications/Codium.app/Contents/Resources/app/bin/codium"
+		}
+
+		return ""
+	}
+
+	if flavor == FlavorWindsurf {
+		if command.Exists("windsurf") {
+			return "windsurf"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Windsurf.app/Contents/Resources/app/bin/windsurf") {
+			return "/Applications/Windsurf.app/Contents/Resources/app/bin/windsurf"
 		}
 
 		return ""

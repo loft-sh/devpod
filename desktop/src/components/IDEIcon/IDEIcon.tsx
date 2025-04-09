@@ -32,6 +32,7 @@ import {
   VSCodeInsidersSvg,
   VSCodeSvg,
   WebstormSvg,
+  WindsurfSvg,
   ZedDarkSvg,
   ZedSvg,
 } from "../../images"
@@ -73,6 +74,7 @@ const IDE_ICONS: Record<string, string> = {
   zed: ZedSvg,
   zed_dark: ZedDarkSvg,
   rstudio: RStudioSvg,
+  windsurf: WindsurfSvg,
 }
 
 type TIDEIconProps = Readonly<{ ide: TIDE; size?: "sm" | "md" }> & BoxProps
