@@ -67,7 +67,10 @@ func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, devPodConfig *con
 	if cmd.GlobalFlags.Debug {
 		level = logrus.DebugLevel
 	}
-	logger := log.NewStdoutLogger(os.Stdin, nil, nil, level)
+	var logger log.Logger = log.NewStdoutLogger(os.Stdin, os.Stdout, os.Stderr, level)
+	if os.Getenv("DEVPOD_UI") == "true" {
+		logger = log.Discard
+	}
 	logger.Debugf("Resolving devcontainer config for source: %s", rawSource)
 
 	ctx, cancel := context.WithTimeout(context.Background(), cmd.timeout)
@@ -102,7 +105,7 @@ func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, devPodConfig *con
 		if err != nil {
 			return err
 		}
-		log.Default.Done(string(out))
+		fmt.Println(string(out))
 	}
 	defer close(done)
 

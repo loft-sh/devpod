@@ -432,6 +432,8 @@ github.com/loft-sh/apiserver v0.0.0-20250206205835-422f1d472459 h1:6SrgBtT1S9ANs
 github.com/loft-sh/apiserver v0.0.0-20250206205835-422f1d472459/go.mod h1:rung3jsKjaVAtykQN0vWmFHhx2A/umpRyAae8BJVSeE=
 github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac h1:Gz/7Lb7WgdgIv+KJz87ORA1zvQW52tUqKPGyunlp4dQ=
 github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac/go.mod h1:YImeRjXH34Yf5E79T7UHBQpDZl9fIaaFRgyZ/bkY+UQ=
+github.com/loft-sh/log v0.0.0-20250409101748-50124f882858 h1:MKlp3CvzXqd+a2plptpE/bKcVMb8t/7BrEuy6Yqmnaw=
+github.com/loft-sh/log v0.0.0-20250409101748-50124f882858/go.mod h1:YImeRjXH34Yf5E79T7UHBQpDZl9fIaaFRgyZ/bkY+UQ=
 github.com/loft-sh/programming-language-detection v0.0.5 h1:XiWlxtrf4t6Z7SQiob0JMKaCeMHCP3kWhB80wLt+EMY=
 github.com/loft-sh/programming-language-detection v0.0.5/go.mod h1:QGPQGKr9q1+rQS4OyisS5CPGY1a76SdNaZuk9oy+2cE=
 github.com/loft-sh/ssh v0.0.5 h1:CmLfBrbekAZmYhpS+urhqmUZW1XU9kUo2bi4lJiUFH8=

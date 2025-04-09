@@ -62,4 +62,5 @@ type Logger interface {
 
 	Writer(level logrus.Level, raw bool) io.WriteCloser
 	WriteString(level logrus.Level, message string)
+	WriteLevel(level logrus.Level, message []byte) (int, error)
 }
