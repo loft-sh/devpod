@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,11 +16,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/loft-sh/log"
-
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
 	"github.com/loft-sh/devpod/pkg/ts"
+	"github.com/loft-sh/log"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/envknob"
 	"tailscale.com/ipn/store/mem"
@@ -32,6 +32,7 @@ const (
 	TSPortForwardPort string = "12051"
 
 	RunnerProxySocket string = "runner-proxy.sock"
+	TSNetProxySocket  string = "devpod-net.sock"
 
 	netMapCooldown = 30 * time.Second
 )
@@ -66,8 +67,8 @@ func NewWorkspaceServer(config *WorkspaceServerConfig, logger log.Logger) *Works
 	}
 }
 
-// Start initializes the TSNet server, sets up listeners for SSH and HTTP
-// reverse proxy traffic, and waits until the given context is canceled.
+// Start initializes the TSNet server, sets up listeners for SSH, HTTP reverse proxy, and
+// creates an proxy socket for external Tailscale clients, then waits until the given context is canceled.
 func (s *WorkspaceServer) Start(ctx context.Context) error {
 	s.log.Infof("Starting workspace server")
 
@@ -81,11 +82,18 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 		return err
 	}
 
-	// send heartbeats
+	// Send heartbeats
 	go s.sendHeartbeats(ctx, projectName, workspaceName, lc)
 
-	// Start both SSH and HTTP reverse proxy listeners
+	// Start SSH, HTTP reverse proxy, and runner proxy listeners.
 	if err := s.startListeners(ctx, projectName, workspaceName, lc); err != nil {
+		return err
+	}
+
+	tsProxySocket := filepath.Join(s.config.RootDir, TSNetProxySocket)
+	_ = os.Remove(tsProxySocket)
+
+	if err := s.startTSProxy(ctx, tsProxySocket); err != nil {
 		return err
 	}
 
@@ -486,4 +494,77 @@ func (s *WorkspaceServer) discoverRunner(ctx context.Context, lc *tailscale.Loca
 
 	s.log.Infof("discoverRunner: selected runner = %s", runner)
 	return runner, nil
+}
+
+// startTSProxy starts a socket listener on the given socketPath that can be used by other processes to communicate with available tsnet peers.
+func (s *WorkspaceServer) startTSProxy(ctx context.Context, socketPath string) error {
+	ln, err := net.Listen("unix", socketPath)
+	if err != nil {
+		return fmt.Errorf("failed to listen on socket %s: %w", socketPath, err)
+	}
+
+	if err := os.Chmod(socketPath, 0777); err != nil {
+		s.log.Errorf("failed to set socket permissions on %s: %v", socketPath, err)
+	}
+
+	s.log.Infof("Network proxy listening on socket %s", socketPath)
+
+	go func() {
+		defer ln.Close()
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				select {
+				case <-ctx.Done():
+					s.log.Infof("Tailscale proxy listener shutting down (context cancelled)")
+					return
+				default:
+					s.log.Errorf("Error accepting connection: %v", err)
+					continue
+				}
+			}
+			go s.handleTSProxyConnection(ctx, conn)
+		}
+	}()
+
+	return nil
+}
+
+func (s *WorkspaceServer) handleTSProxyConnection(ctx context.Context, conn net.Conn) {
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+	req, err := http.ReadRequest(reader)
+	if err != nil {
+		s.log.Errorf("Failed to read HTTP request: %v", err)
+		return
+	}
+
+	// Derive the target from the Host header in the HTTP request.
+	target := req.Host
+	if target == "" {
+		s.log.Errorf("HTTP request does not contain a Host header")
+		return
+	}
+	// Append default port if not specified.
+	if !strings.Contains(target, ":") {
+		target = target + ":80"
+	}
+	s.log.Infof("Proxying request to target %s", target)
+
+	tsConn, err := s.Dial(ctx, "tcp", target)
+	if err != nil {
+		s.log.Errorf("Error dialing target %s: %v", target, err)
+		return
+	}
+	defer tsConn.Close()
+
+	if err := req.Write(tsConn); err != nil {
+		s.log.Errorf("Error forwarding request to target %s: %v", target, err)
+		return
+	}
+
+	if _, err := io.Copy(conn, tsConn); err != nil {
+		s.log.Errorf("Error forwarding response from target: %v", err)
+	}
 }
