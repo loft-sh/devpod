@@ -273,6 +273,17 @@ func (c *client) Ping(ctx context.Context, writer io.Writer) error {
 	return nil
 }
 
+func (c *client) GetClientAddress(ctx context.Context) (string, error) {
+	status, err := c.tsClient.Status(ctx)
+	if err != nil {
+		return "", err
+	}
+	if status.Self == nil {
+		return "", fmt.Errorf("no self peer found")
+	}
+	return status.Self.DNSName, nil
+}
+
 func (c *client) initPlatformClient(ctx context.Context) (platformclient.Client, error) {
 	configPath, err := platform.LoftConfigPath(c.Context(), c.Provider())
 	if err != nil {
