@@ -953,6 +953,7 @@ func startBrowserTunnel(
 				configureDockerCredentials,
 				configureGitCredentials,
 				configureGitSSHSignatureHelper,
+				"",
 				logger,
 			)
 			if err != nil {
