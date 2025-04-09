@@ -29,7 +29,7 @@ func Open(ctx context.Context, workspace, folder string, newWindow bool, flavor 
 }
 
 func openViaBrowser(workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
-	protocol := `vscode://`
+	var protocol string
 	switch flavor {
 	case FlavorStable:
 		protocol = `vscode://`
