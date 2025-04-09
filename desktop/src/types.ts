@@ -198,6 +198,7 @@ export const SUPPORTED_IDES = [
   "openvscode",
   "jupyternotebook",
   "fleet",
+  "windsurf",
 ] as const
 export type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
 export type TImportWorkspaceConfig = Readonly<{

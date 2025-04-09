@@ -473,6 +473,16 @@ function ExperimentalSettings() {
             RStudio Server
           </FormLabel>
         </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_windsurf}
+            onChange={(e) => set("experimental_windsurf", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Windsurf
+          </FormLabel>
+        </HStack>
       </SettingSection>
 
       <SettingSection title="Additional CLI Flags" description={cliFlagsHelpText}>

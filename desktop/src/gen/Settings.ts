@@ -27,6 +27,7 @@ export interface Settings {
   experimental_zed: boolean
   experimental_positron: boolean
   experimental_rstudio: boolean
+  experimental_windsurf: boolean
   experimental_devPodPro: boolean
   experimental_colorMode: ColorMode
 }

@@ -194,6 +194,14 @@ var AllowedIDEs = []AllowedIDE{
 		Experimental: true,
 		Group:        config.IDEGroupOther,
 	},
+	{
+		Name:         config.IDEWindsurf,
+		DisplayName:  "Windsurf",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/windsurf.svg",
+		Experimental: true,
+		Group:        config.IDEGroupPrimary,
+	},
 }
 
 func RefreshIDEOptions(devPodConfig *config.Config, workspace *provider.Workspace, ide string, options []string) (*provider.Workspace, error) {
