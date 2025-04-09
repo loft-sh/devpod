@@ -810,7 +810,7 @@ github.com/loft-sh/api/v4/pkg/managerfactory
 # github.com/loft-sh/apiserver v0.0.0-20250206205835-422f1d472459
 ## explicit; go 1.23.1
 github.com/loft-sh/apiserver/pkg/builders
-# github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac
+# github.com/loft-sh/log v0.0.0-20250409101748-50124f882858
 ## explicit; go 1.20
 github.com/loft-sh/log
 github.com/loft-sh/log/hash

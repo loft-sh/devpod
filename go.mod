@@ -34,7 +34,7 @@ require (
 	github.com/loft-sh/analytics-client v0.0.0-20240219162240-2f4c64b2494e
 	github.com/loft-sh/api/v4 v4.3.0-devpod.alpha.25
 	github.com/loft-sh/apiserver v0.0.0-20250206205835-422f1d472459
-	github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac
+	github.com/loft-sh/log v0.0.0-20250409101748-50124f882858
 	github.com/loft-sh/programming-language-detection v0.0.5
 	github.com/loft-sh/ssh v0.0.5
 	github.com/mattn/go-isatty v0.0.20

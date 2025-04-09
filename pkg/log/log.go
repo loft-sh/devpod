@@ -147,6 +147,14 @@ func (c *CombinedLogger) WriteString(level logrus.Level, message string) {
 	})
 }
 
+func (c *CombinedLogger) WriteLevel(level logrus.Level, message []byte) (int, error) {
+	c.log(level, func(logger logLib.Logger) {
+		_, _ = logger.WriteLevel(level, message)
+	})
+
+	return len(message), nil
+}
+
 func (c *CombinedLogger) Question(params *survey.QuestionOptions) (string, error) {
 	return "", errors.New("questions in combined logger not supported")
 }

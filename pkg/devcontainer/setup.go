@@ -80,7 +80,7 @@ func (r *runner) setupContainer(
 		Agent:            r.WorkspaceConfig.Agent,
 		ContentFolder:    r.WorkspaceConfig.ContentFolder,
 	}
-	if crane.ShouldUse(&r.WorkspaceConfig.CLIOptions) {
+	if crane.ShouldUse(&r.WorkspaceConfig.CLIOptions) && r.WorkspaceConfig.Workspace.Source.GitRepository != "" {
 		workspaceConfig.PullFromInsideContainer = "true"
 	}
 	// compress container workspace info

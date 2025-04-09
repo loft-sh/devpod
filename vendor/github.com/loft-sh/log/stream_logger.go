@@ -554,6 +554,17 @@ func (s *StreamLogger) write(level logrus.Level, message []byte) (int, error) {
 	return n, err
 }
 
+func (s *StreamLogger) WriteLevel(level logrus.Level, message []byte) (int, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	if s.level < level {
+		return 0, nil
+	}
+
+	return s.write(level, message)
+}
+
 func (s *StreamLogger) Question(params *survey.QuestionOptions) (string, error) {
 	s.m.Lock()
 	defer s.m.Unlock()

@@ -174,16 +174,23 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	if b, err := workspaceInfo.PullFromInsideContainer.Bool(); err == nil && b {
-		if err := agent.CloneRepositoryForWorkspace(ctx,
-			&workspaceInfo.Source,
-			&workspaceInfo.Agent,
-			setupInfo.SubstitutionContext.ContainerWorkspaceFolder,
-			"",
-			workspaceInfo.CLIOptions,
-			true,
-			logger,
-		); err != nil {
-			return err
+		// check if workspace folder exists and is a git repository.
+		// skip cloning if it does
+		_, err := os.Stat(filepath.Join(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, ".git"))
+		if err == nil && !workspaceInfo.CLIOptions.Recreate {
+			logger.Debugf("Workspace repository already checked out %s, skipping clone", setupInfo.SubstitutionContext.ContainerWorkspaceFolder)
+		} else {
+			if err := agent.CloneRepositoryForWorkspace(ctx,
+				&workspaceInfo.Source,
+				&workspaceInfo.Agent,
+				setupInfo.SubstitutionContext.ContainerWorkspaceFolder,
+				"",
+				workspaceInfo.CLIOptions,
+				true,
+				logger,
+			); err != nil {
+				return err
+			}
 		}
 	}
 
