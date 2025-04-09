@@ -1,4 +1,4 @@
-package ts
+package workspace
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
+	"github.com/loft-sh/devpod/pkg/ts"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/envknob"
 	"tailscale.com/ipn/store/mem"
@@ -90,7 +91,7 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 
 	go func() {
 		lastUpdate := time.Now()
-		if err := WatchNetmap(ctx, lc, func(netMap *netmap.NetworkMap) {
+		if err := ts.WatchNetmap(ctx, lc, func(netMap *netmap.NetworkMap) {
 			if time.Since(lastUpdate) < netMapCooldown {
 				return
 			}
@@ -164,10 +165,10 @@ func (s *WorkspaceServer) validateConfig() error {
 // setupControlURL constructs the control URL and verifies DERP connection.
 func (s *WorkspaceServer) setupControlURL(ctx context.Context) (*url.URL, error) {
 	baseURL := &url.URL{
-		Scheme: GetEnvOrDefault("LOFT_TSNET_SCHEME", "https"),
+		Scheme: ts.GetEnvOrDefault("LOFT_TSNET_SCHEME", "https"),
 		Host:   s.config.PlatformHost,
 	}
-	if err := CheckDerpConnection(ctx, baseURL); err != nil {
+	if err := ts.CheckDerpConnection(ctx, baseURL); err != nil {
 		return nil, fmt.Errorf("failed to verify DERP connection: %w", err)
 	}
 	return baseURL, nil
