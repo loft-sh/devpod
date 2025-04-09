@@ -89,6 +89,9 @@ type DaemonClient interface {
 
 	// Ping tries to ping a workspace and prints results to stdout
 	Ping(ctx context.Context, stdout io.Writer) error
+
+	// GetClientAddress returns dns address of client.
+	GetClientAddress(ctx context.Context) (string, error)
 }
 
 type MachineClient interface {
