@@ -20,7 +20,7 @@ type SSHService struct {
 }
 
 // NewSSHService creates a new SSHService.
-func NewSSHServer(tsServer *tsnet.Server, tracker *ConnTracker, log log.Logger) (*SSHService, error) {
+func NewSSHService(tsServer *tsnet.Server, tracker *ConnTracker, log log.Logger) (*SSHService, error) {
 	l, err := tsServer.Listen("tcp", fmt.Sprintf(":%d", sshServer.DefaultUserPort))
 	if err != nil {
 		return nil, fmt.Errorf("failed to listen for SSH on port %d: %w", sshServer.DefaultUserPort, err)

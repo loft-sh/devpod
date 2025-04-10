@@ -29,7 +29,7 @@ type WorkspaceServerConfig struct {
 // It creates and manages network server instance as well as
 // all services that run on DevPod network inside the workspace.
 type WorkspaceServer struct {
-	tsServer    *tsnet.Server
+	network     *tsnet.Server // TODO: we probably want to hide network behind our own interface at some point
 	config      *WorkspaceServerConfig
 	log         log.Logger
 	connTracker *ConnTracker
@@ -55,47 +55,47 @@ func NewWorkspaceServer(config *WorkspaceServerConfig, logger log.Logger) *Works
 // Start initializes the network server server and all services, then blocks until the context is canceled.
 func (s *WorkspaceServer) Start(ctx context.Context) error {
 	s.log.Infof("Starting workspace server")
-	workspaceName, projectName, err := s.setupTSNet(ctx)
+	workspaceName, projectName, err := s.joinNetwork(ctx)
 	if err != nil {
 		return err
 	}
 
-	lc, err := s.tsServer.LocalClient()
+	lc, err := s.network.LocalClient()
 	if err != nil {
 		return err
 	}
 
 	// Create and start the SSH service.
-	s.sshSvc, err = NewSSHServer(s.tsServer, s.connTracker, s.log)
+	s.sshSvc, err = NewSSHService(s.network, s.connTracker, s.log)
 	if err != nil {
 		return err
 	}
 	s.sshSvc.Start(ctx)
 
 	// Create and start the HTTP port forward service.
-	s.httpProxySvc, err = NewHTTPPortForwardService(s.tsServer, s.connTracker, s.log)
+	s.httpProxySvc, err = NewHTTPPortForwardService(s.network, s.connTracker, s.log)
 	if err != nil {
 		return err
 	}
 	s.httpProxySvc.Start(ctx)
 
 	// Create and start the platform git credentials service.
-	s.platformGitCredentialsSvc, err = NewPlatformGitCredentialsService(s.config, s.tsServer, lc, projectName, workspaceName, s.log)
+	s.platformGitCredentialsSvc, err = NewPlatformGitCredentialsService(s.config, s.network, lc, projectName, workspaceName, s.log)
 	if err != nil {
 		return err
 	}
 	s.platformGitCredentialsSvc.Start(ctx)
 
-	// Create and start the TS proxy service.
-	tsProxySocket := filepath.Join(s.config.RootDir, TSNetProxySocket)
-	s.netProxySvc, err = NewNetworkProxyService(tsProxySocket, s.tsServer, s.log)
+	// Create and start the network proxy service.
+	networkSocket := filepath.Join(s.config.RootDir, NetworkProxySocket)
+	s.netProxySvc, err = NewNetworkProxyService(networkSocket, s.network, s.log)
 	if err != nil {
 		return err
 	}
 	s.netProxySvc.Start(ctx)
 
 	// Start the heartbeat service.
-	s.heartbeatSvc = NewHeartbeatService(s.config, s.tsServer, lc, projectName, workspaceName, s.connTracker, s.log)
+	s.heartbeatSvc = NewHeartbeatService(s.config, s.network, lc, projectName, workspaceName, s.connTracker, s.log)
 	go s.heartbeatSvc.Start(ctx)
 
 	// Start netmap watcher.
@@ -107,7 +107,7 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop shuts down all sub-servers and the TSNet server.
+// Stop shuts down all services and the network server.
 func (s *WorkspaceServer) Stop() {
 	if s.sshSvc != nil {
 		s.sshSvc.Stop()
@@ -121,24 +121,24 @@ func (s *WorkspaceServer) Stop() {
 	if s.netProxySvc != nil {
 		s.netProxySvc.Stop()
 	}
-	if s.tsServer != nil {
-		s.tsServer.Close()
-		s.tsServer = nil
+	if s.network != nil {
+		s.network.Close()
+		s.network = nil
 	}
 	s.log.Info("Workspace server stopped")
 }
 
-// Dial dials the given address using the TSNet server.
+// Dial dials the given address using the network server.
 func (s *WorkspaceServer) Dial(ctx context.Context, network, addr string) (net.Conn, error) {
-	if s.tsServer == nil {
-		return nil, fmt.Errorf("tailscale server is not running")
+	if s.network == nil {
+		return nil, fmt.Errorf("network server is not running")
 	}
-	return s.tsServer.Dial(ctx, network, addr)
+	return s.network.Dial(ctx, network, addr)
 }
 
-// setupTSNet validates configuration, sets up the control URL, starts the TSNet server,
+// joinNetwork validates configuration, sets up the control URL, starts the network server,
 // and parses the hostname into workspace and project names.
-func (s *WorkspaceServer) setupTSNet(ctx context.Context) (workspace, project string, err error) {
+func (s *WorkspaceServer) joinNetwork(ctx context.Context) (workspace, project string, err error) {
 	if err = s.validateConfig(); err != nil {
 		return "", "", err
 	}
@@ -146,7 +146,7 @@ func (s *WorkspaceServer) setupTSNet(ctx context.Context) (workspace, project st
 	if err != nil {
 		return "", "", err
 	}
-	if err = s.initTsServer(ctx, baseURL); err != nil {
+	if err = s.initNetworkServer(ctx, baseURL); err != nil {
 		return "", "", err
 	}
 	return s.parseWorkspaceHostname()
@@ -170,11 +170,11 @@ func (s *WorkspaceServer) setupControlURL(ctx context.Context) (*url.URL, error)
 	return baseURL, nil
 }
 
-func (s *WorkspaceServer) initTsServer(ctx context.Context, controlURL *url.URL) error {
+func (s *WorkspaceServer) initNetworkServer(ctx context.Context, controlURL *url.URL) error {
 	store, _ := mem.New(s.config.LogF, "")
 	envknob.Setenv("TS_DEBUG_TLS_DIAL_INSECURE_SKIP_VERIFY", "true")
 	s.log.Infof("Connecting to control URL - %s/coordinator/", controlURL.String())
-	s.tsServer = &tsnet.Server{
+	s.network = &tsnet.Server{ // TODO: this probably could be extracted from here and local daemon into pkg/ts
 		Hostname:   s.config.WorkspaceHost,
 		Logf:       s.config.LogF,
 		ControlURL: controlURL.String() + "/coordinator/",
@@ -183,7 +183,7 @@ func (s *WorkspaceServer) initTsServer(ctx context.Context, controlURL *url.URL)
 		Ephemeral:  true,
 		Store:      store,
 	}
-	if _, err := s.tsServer.Up(ctx); err != nil {
+	if _, err := s.network.Up(ctx); err != nil {
 		return err
 	}
 	return nil
