@@ -28,7 +28,8 @@ const ExitCodeIO int = 64
 type CredentialsServerCmd struct {
 	*flags.GlobalFlags
 
-	User string
+	User   string
+	Client string
 
 	ConfigureGitHelper    bool
 	ConfigureDockerHelper bool
@@ -61,6 +62,7 @@ func NewCredentialsServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	credentialsServerCmd.Flags().StringVar(&cmd.GitUserSigningKey, "git-user-signing-key", "", "")
 	credentialsServerCmd.Flags().StringVar(&cmd.User, "user", "", "The user to use")
 	_ = credentialsServerCmd.MarkFlagRequired("user")
+	credentialsServerCmd.Flags().StringVar(&cmd.Client, "client", "", "client host")
 
 	return credentialsServerCmd
 }
@@ -108,7 +110,7 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, port int) error {
 	}
 
 	// configure git user
-	err = configureGitUserLocally(ctx, cmd.User, tunnelClient)
+	err = configureGitUserLocally(ctx, cmd.User, tunnelClient) // FIXME: still uses tunnel client for git creds
 	if err != nil {
 		log.Debugf("Error configuring git user: %v", err)
 		return err
@@ -148,7 +150,7 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, port int) error {
 		}(cmd.User)
 	}
 
-	return credentials.RunCredentialsServer(ctx, port, tunnelClient, log)
+	return credentials.RunCredentialsServer(ctx, port, tunnelClient, cmd.Client, log)
 }
 
 func configureGitUserLocally(ctx context.Context, userName string, client tunnel.TunnelClient) error {

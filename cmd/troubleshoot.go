@@ -12,7 +12,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
-	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
+	daemon "github.com/loft-sh/devpod/pkg/daemon/local"
 	"github.com/loft-sh/devpod/pkg/platform"
 	pkgprovider "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/version"

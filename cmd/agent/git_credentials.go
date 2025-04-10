@@ -12,11 +12,11 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/loft-sh/devpod/cmd/agent/container"
 	"github.com/loft-sh/devpod/cmd/flags"
+	workspaced "github.com/loft-sh/devpod/pkg/daemon/workspace"
+	"github.com/loft-sh/devpod/pkg/daemon/workspace/network"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
-	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 )
@@ -79,7 +79,7 @@ func (cmd *GitCredentialsCmd) Run(ctx context.Context, args []string, log log.Lo
 }
 
 func getCredentialsFromWorkspaceServer(credentials *gitcredentials.GitCredentials) *gitcredentials.GitCredentials {
-	if _, err := os.Stat(filepath.Join(container.RootDir, ts.RunnerProxySocket)); err != nil {
+	if _, err := os.Stat(filepath.Join(workspaced.RootDir, network.RunnerProxySocket)); err != nil {
 		// workspace server is not running
 		return nil
 	}
@@ -87,7 +87,7 @@ func getCredentialsFromWorkspaceServer(credentials *gitcredentials.GitCredential
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", filepath.Join(container.RootDir, ts.RunnerProxySocket))
+				return net.Dial("unix", filepath.Join(workspaced.RootDir, network.RunnerProxySocket))
 			},
 		},
 	}
