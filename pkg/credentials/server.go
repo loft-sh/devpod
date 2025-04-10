@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	locald "github.com/loft-sh/devpod/pkg/daemon/platform"
 	workspaced "github.com/loft-sh/devpod/pkg/daemon/workspace"
+	network "github.com/loft-sh/devpod/pkg/daemon/workspace/network"
 	devpodlog "github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
@@ -159,7 +160,7 @@ func handleGitCredentialsOverTSNet(ctx context.Context, writer http.ResponseWrit
 
 	log.Infof("Received git credentials post data: %s", string(bodyBytes))
 	// Set up HTTP transport that uses our network socket.
-	socketPath := filepath.Join(workspaced.RootDir, workspaced.TSNetProxySocket)
+	socketPath := filepath.Join(workspaced.RootDir, network.TSNetProxySocket)
 	transport := &http.Transport{
 		Dial: func(network, addr string) (net.Conn, error) {
 			return net.Dial("unix", socketPath)
