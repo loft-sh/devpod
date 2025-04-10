@@ -18,6 +18,7 @@ const (
 
 	RunnerProxySocket  string = "runner-proxy.sock"
 	NetworkProxySocket string = "devpod-net.sock"
+	RootDir            string = "/var/devpod"
 
 	netMapCooldown = 30 * time.Second
 )
