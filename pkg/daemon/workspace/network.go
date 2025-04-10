@@ -20,7 +20,7 @@ func RunNetworkServer(ctx context.Context, d *Daemon, errChan chan<- error, wg *
 		errChan <- err
 		return
 	}
-	logger := initLogging()
+	logger := log.NewStdoutLogger(nil, os.Stdout, os.Stderr, logrus.InfoLevel)
 	config := client.NewConfig()
 	config.AccessKey = d.Config.Platform.AccessKey
 	config.Host = "https://" + d.Config.Platform.PlatformHost
@@ -43,8 +43,4 @@ func RunNetworkServer(ctx context.Context, d *Daemon, errChan chan<- error, wg *
 	if err := tsServer.Start(ctx); err != nil {
 		errChan <- fmt.Errorf("network server: %w", err)
 	}
-}
-
-func initLogging() log.Logger {
-	return log.NewStdoutLogger(nil, os.Stdout, os.Stderr, logrus.InfoLevel)
 }

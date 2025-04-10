@@ -18,8 +18,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// RootDir is the directory used by the daemon.
 const (
+	// RootDir is the directory used by the daemon.
 	RootDir                          = "/var/devpod"
 	WorkspaceDaemonConfigExtraEnvVar = "DEVPOD_WORKSPACE_DAEMON_CONFIG"
 )
@@ -121,7 +121,6 @@ func (d *Daemon) Run(c *cobra.Command, args []string) error {
 }
 
 // loadConfig loads the daemon configuration from base64-encoded JSON.
-// If a CLI-provided timeout exists, it overrides the timeout in the config.
 func (d *Daemon) loadConfig() error {
 	if encodedCfg := os.Getenv(WorkspaceDaemonConfigExtraEnvVar); strings.TrimSpace(encodedCfg) != "" {
 		decoded, err := base64.StdEncoding.DecodeString(encodedCfg)

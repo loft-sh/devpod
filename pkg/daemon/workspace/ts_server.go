@@ -71,8 +71,6 @@ func NewWorkspaceServer(config *WorkspaceServerConfig, logger log.Logger) *Works
 // creates an proxy socket for external Tailscale clients, then waits until the given context is canceled.
 func (s *WorkspaceServer) Start(ctx context.Context) error {
 	s.log.Infof("Starting workspace server")
-
-	// Perform TSNet initialization (validation, control URL, server startup, hostname parsing)
 	workspaceName, projectName, err := s.setupTSNet(ctx)
 	if err != nil {
 		return err
@@ -81,22 +79,15 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	// Send heartbeats
 	go s.sendHeartbeats(ctx, projectName, workspaceName, lc)
-
-	// Start SSH, HTTP reverse proxy, and runner proxy listeners.
 	if err := s.startListeners(ctx, projectName, workspaceName, lc); err != nil {
 		return err
 	}
-
 	tsProxySocket := filepath.Join(s.config.RootDir, TSNetProxySocket)
 	_ = os.Remove(tsProxySocket)
-
 	if err := s.startTSProxy(ctx, tsProxySocket); err != nil {
 		return err
 	}
-
 	go func() {
 		lastUpdate := time.Now()
 		if err := ts.WatchNetmap(ctx, lc, func(netMap *netmap.NetworkMap) {
@@ -104,7 +95,6 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 				return
 			}
 			lastUpdate = time.Now()
-
 			nm, err := json.Marshal(netMap)
 			if err != nil {
 				s.log.Errorf("Failed to marshal netmap: %v", err)
@@ -115,8 +105,6 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 			s.log.Errorf("Failed to watch netmap: %v", err)
 		}
 	}()
-
-	// Wait until the context is canceled.
 	<-ctx.Done()
 	return nil
 }
@@ -149,16 +137,13 @@ func (s *WorkspaceServer) setupTSNet(ctx context.Context) (workspace, project st
 	if err = s.validateConfig(); err != nil {
 		return "", "", err
 	}
-
 	baseURL, err := s.setupControlURL(ctx)
 	if err != nil {
 		return "", "", err
 	}
-
 	if err = s.initTsServer(ctx, baseURL); err != nil {
 		return "", "", err
 	}
-
 	return s.parseWorkspaceHostname()
 }
 
@@ -213,21 +198,16 @@ func (s *WorkspaceServer) parseWorkspaceHostname() (workspace, project string, e
 
 // startListeners creates and starts the SSH and HTTP reverse proxy listeners.
 func (s *WorkspaceServer) startListeners(ctx context.Context, projectName, workspaceName string, lc *tailscale.LocalClient) error {
-	// Create and start the SSH listener.
 	s.log.Infof("Starting SSH listener")
 	sshListener, err := s.createListener(fmt.Sprintf(":%d", sshServer.DefaultUserPort))
 	if err != nil {
 		return err
 	}
-
-	// Create and start the HTTP reverse proxy listener.
 	s.log.Infof("Starting HTTP reverse proxy listener on TSNet port %s", TSPortForwardPort)
 	wsListener, err := s.createListener(fmt.Sprintf(":%s", TSPortForwardPort))
 	if err != nil {
 		return fmt.Errorf("failed to create listener on TS port %s: %w", TSPortForwardPort, err)
 	}
-
-	// Create and start the platform HTTP git credentials listener
 	runnerProxySocket := filepath.Join(s.config.RootDir, RunnerProxySocket)
 	s.log.Infof("Starting runner proxy socket on %s", runnerProxySocket)
 	_ = os.Remove(runnerProxySocket)
@@ -235,14 +215,8 @@ func (s *WorkspaceServer) startListeners(ctx context.Context, projectName, works
 	if err != nil {
 		return fmt.Errorf("failed to create listener on TS port %s: %w", TSPortForwardPort, err)
 	}
-
-	// make sure all users can access the socket
 	_ = os.Chmod(runnerProxySocket, 0o777)
-
-	// add all listeners to the list
 	s.listeners = append(s.listeners, sshListener, wsListener, runnerProxyListener)
-
-	// Setup HTTP handler for git credentials
 	go func() {
 		mux := http.NewServeMux()
 		transport := &http.Transport{DialContext: s.tsServer.Dial}
@@ -253,8 +227,6 @@ func (s *WorkspaceServer) startListeners(ctx context.Context, projectName, works
 			s.log.Errorf("HTTP runner proxy server error: %v", err)
 		}
 	}()
-
-	// Setup HTTP handler for port forwarding.
 	go func() {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/portforward", s.httpPortForwardHandler)
@@ -262,10 +234,7 @@ func (s *WorkspaceServer) startListeners(ctx context.Context, projectName, works
 			s.log.Errorf("HTTP server error on TS port %s: %v", TSPortForwardPort, err)
 		}
 	}()
-
-	// Start handling SSH connections.
 	go s.handleSSHConnections(ctx, sshListener)
-
 	return nil
 }
 
@@ -275,51 +244,55 @@ func (s *WorkspaceServer) createListener(addr string) (net.Listener, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to listen on %s: %w", addr, err)
 	}
-
-	// create a new tracked listener to track the number of connections
 	return l, nil
 }
 
 func (s *WorkspaceServer) addConnection() {
 	s.connectionCounterMu.Lock()
-	defer s.connectionCounterMu.Unlock()
 	s.connectionCounter++
+	s.connectionCounterMu.Unlock()
 }
 
 func (s *WorkspaceServer) removeConnection() {
 	s.connectionCounterMu.Lock()
-	defer s.connectionCounterMu.Unlock()
 	s.connectionCounter--
+	s.connectionCounterMu.Unlock()
 }
 
-// httpPortForwardHandler is the HTTP reverse proxy handler for workspace.
-// It reconstructs the target URL using custom headers and forwards the request.
+func (s *WorkspaceServer) getConnectionCount() int {
+	s.connectionCounterMu.Lock()
+	defer s.connectionCounterMu.Unlock()
+	return s.connectionCounter
+}
+
+func (s *WorkspaceServer) newReverseProxy(target *url.URL, modifyHeaders func(http.Header)) *httputil.ReverseProxy {
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Director = func(req *http.Request) {
+		dest := *target
+		req.URL = &dest
+		req.Host = dest.Host
+		modifyHeaders(req.Header)
+	}
+	return proxy
+}
+
+// gitCredentialsHandler is the HTTP handler for git credentials.
 func (s *WorkspaceServer) gitCredentialsHandler(w http.ResponseWriter, r *http.Request, lc *tailscale.LocalClient, transport *http.Transport, projectName, workspaceName string) {
 	s.log.Infof("Received git credentials request from %s", r.RemoteAddr)
-
-	// create a new http client with a custom transport
 	discoveredRunner, err := s.discoverRunner(r.Context(), lc)
 	if err != nil {
 		http.Error(w, "failed to discover runner", http.StatusInternalServerError)
 		return
 	}
-
-	// build the runner URL
 	runnerURL := fmt.Sprintf("http://%s.ts.loft/devpod/%s/%s/workspace-git-credentials", discoveredRunner, projectName, workspaceName)
 	parsedURL, err := url.Parse(runnerURL)
 	if err != nil {
 		http.Error(w, "failed to parse runner URL", http.StatusInternalServerError)
 		return
 	}
-
-	// Build the reverse proxy with a custom Director.
-	proxy := httputil.NewSingleHostReverseProxy(parsedURL)
-	proxy.Director = func(req *http.Request) {
-		dest := *parsedURL
-		req.URL = &dest
-		req.Host = dest.Host
-		req.Header.Set("Authorization", "Bearer "+s.config.AccessKey)
-	}
+	proxy := s.newReverseProxy(parsedURL, func(h http.Header) {
+		h.Set("Authorization", "Bearer "+s.config.AccessKey)
+	})
 	proxy.Transport = transport
 	proxy.ServeHTTP(w, r)
 }
@@ -330,8 +303,6 @@ func (s *WorkspaceServer) httpPortForwardHandler(w http.ResponseWriter, r *http.
 	s.addConnection()
 	defer s.removeConnection()
 	s.log.Debugf("httpPortForwardHandler: starting")
-
-	// Retrieve required custom headers.
 	targetPort := r.Header.Get("X-Loft-Forward-Port")
 	baseForwardStr := r.Header.Get("X-Loft-Forward-Url")
 	if targetPort == "" || baseForwardStr == "" {
@@ -339,8 +310,6 @@ func (s *WorkspaceServer) httpPortForwardHandler(w http.ResponseWriter, r *http.
 		return
 	}
 	s.log.Debugf("httpPortForwardHandler: received headers: X-Loft-Forward-Port=%s, X-Loft-Forward-Url=%s", targetPort, baseForwardStr)
-
-	// Parse and modify the URL to target the local endpoint.
 	parsedURL, err := url.Parse(baseForwardStr)
 	if err != nil {
 		s.log.Errorf("httpPortForwardHandler: failed to parse base URL: %v", err)
@@ -350,20 +319,12 @@ func (s *WorkspaceServer) httpPortForwardHandler(w http.ResponseWriter, r *http.
 	parsedURL.Scheme = "http"
 	parsedURL.Host = "127.0.0.1:" + targetPort
 	s.log.Debugf("httpPortForwardHandler: final target URL=%s", parsedURL.String())
-
-	// Build the reverse proxy with a custom Director.
-	proxy := httputil.NewSingleHostReverseProxy(parsedURL)
-	proxy.Director = func(req *http.Request) {
-		dest := *parsedURL
-		req.URL = &dest
-		req.Host = dest.Host
-		// Remove custom headers so they are not forwarded.
-		req.Header.Del("X-Loft-Forward-Port")
-		req.Header.Del("X-Loft-Forward-Url")
-		req.Header.Del("X-Loft-Forward-Authorization")
-	}
+	proxy := s.newReverseProxy(parsedURL, func(h http.Header) {
+		h.Del("X-Loft-Forward-Port")
+		h.Del("X-Loft-Forward-Url")
+		h.Del("X-Loft-Forward-Authorization")
+	})
 	proxy.Transport = http.DefaultTransport
-
 	s.log.Infof("httpPortForwardHandler: final proxied request: %s %s", r.Method, parsedURL.String())
 	proxy.ServeHTTP(w, r)
 }
@@ -393,7 +354,6 @@ func (s *WorkspaceServer) handleSSHConnection(clientConn net.Conn) {
 	s.addConnection()
 	defer s.removeConnection()
 	defer clientConn.Close()
-
 	localAddr := fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultUserPort)
 	backendConn, err := net.Dial("tcp", localAddr)
 	if err != nil {
@@ -401,8 +361,6 @@ func (s *WorkspaceServer) handleSSHConnection(clientConn net.Conn) {
 		return
 	}
 	defer backendConn.Close()
-
-	// Start bidirectional copy between client and backend.
 	go func() {
 		defer clientConn.Close()
 		defer backendConn.Close()
@@ -411,12 +369,10 @@ func (s *WorkspaceServer) handleSSHConnection(clientConn net.Conn) {
 	_, err = io.Copy(clientConn, backendConn)
 }
 
+// sendHeartbeats sends periodic heartbeats if there are active connections.
 func (s *WorkspaceServer) sendHeartbeats(ctx context.Context, projectName, workspaceName string, lc *tailscale.LocalClient) {
-	// create a new http client with a custom transport
 	transport := &http.Transport{DialContext: s.tsServer.Dial}
 	client := &http.Client{Transport: transport, Timeout: 10 * time.Second}
-
-	// create a ticker to send heartbeats every 10 seconds
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -424,15 +380,9 @@ func (s *WorkspaceServer) sendHeartbeats(ctx context.Context, projectName, works
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			// get the current number of connections
-			s.connectionCounterMu.Lock()
-			connections := s.connectionCounter
-			s.connectionCounterMu.Unlock()
-
-			// send a heartbeat if there are connections
-			if connections > 0 {
-				err := s.sendHeartbeat(ctx, client, projectName, workspaceName, lc, connections)
-				if err != nil {
+			connCount := s.getConnectionCount()
+			if connCount > 0 {
+				if err := s.sendHeartbeat(ctx, client, projectName, workspaceName, lc, connCount); err != nil {
 					s.log.Errorf("Failed to send heartbeat: %v", err)
 				}
 			}
@@ -441,28 +391,24 @@ func (s *WorkspaceServer) sendHeartbeats(ctx context.Context, projectName, works
 }
 
 func (s *WorkspaceServer) sendHeartbeat(ctx context.Context, client *http.Client, projectName, workspaceName string, lc *tailscale.LocalClient, connections int) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	hbCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-
-	discoveredRunner, err := s.discoverRunner(ctx, lc)
+	discoveredRunner, err := s.discoverRunner(hbCtx, lc)
 	if err != nil {
 		return fmt.Errorf("failed to discover runner: %w", err)
 	}
-
 	heartbeatURL := fmt.Sprintf("http://%s.ts.loft/devpod/%s/%s/heartbeat", discoveredRunner, projectName, workspaceName)
 	s.log.Infof("Sending heartbeat to %s, because there are %d active connections", heartbeatURL, connections)
-	req, err := http.NewRequestWithContext(ctx, "GET", heartbeatURL, nil)
+	req, err := http.NewRequestWithContext(hbCtx, "GET", heartbeatURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request for %s: %w", heartbeatURL, err)
 	}
-
 	req.Header.Set("Authorization", "Bearer "+s.config.AccessKey)
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("request to %s failed: %w", heartbeatURL, err)
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("received response from %s - Status: %d", heartbeatURL, resp.StatusCode)
 	}
@@ -476,13 +422,11 @@ func (s *WorkspaceServer) discoverRunner(ctx context.Context, lc *tailscale.Loca
 	if err != nil {
 		return "", fmt.Errorf("failed to get status: %w", err)
 	}
-
 	var runner string
 	for _, peer := range status.Peer {
 		if peer == nil || peer.HostName == "" {
 			continue
 		}
-
 		if strings.HasSuffix(peer.HostName, "runner") {
 			runner = peer.HostName
 			break
@@ -491,7 +435,6 @@ func (s *WorkspaceServer) discoverRunner(ctx context.Context, lc *tailscale.Loca
 	if runner == "" {
 		return "", fmt.Errorf("no active runner found")
 	}
-
 	s.log.Infof("discoverRunner: selected runner = %s", runner)
 	return runner, nil
 }
@@ -502,13 +445,10 @@ func (s *WorkspaceServer) startTSProxy(ctx context.Context, socketPath string) e
 	if err != nil {
 		return fmt.Errorf("failed to listen on socket %s: %w", socketPath, err)
 	}
-
 	if err := os.Chmod(socketPath, 0777); err != nil {
 		s.log.Errorf("failed to set socket permissions on %s: %v", socketPath, err)
 	}
-
 	s.log.Infof("Network proxy listening on socket %s", socketPath)
-
 	go func() {
 		defer ln.Close()
 		for {
@@ -526,44 +466,36 @@ func (s *WorkspaceServer) startTSProxy(ctx context.Context, socketPath string) e
 			go s.handleTSProxyConnection(ctx, conn)
 		}
 	}()
-
 	return nil
 }
 
 func (s *WorkspaceServer) handleTSProxyConnection(ctx context.Context, conn net.Conn) {
 	defer conn.Close()
-
 	reader := bufio.NewReader(conn)
 	req, err := http.ReadRequest(reader)
 	if err != nil {
 		s.log.Errorf("Failed to read HTTP request: %v", err)
 		return
 	}
-
-	// Derive the target from the Host header in the HTTP request.
 	target := req.Host
 	if target == "" {
 		s.log.Errorf("HTTP request does not contain a Host header")
 		return
 	}
-	// Append default port if not specified.
 	if !strings.Contains(target, ":") {
 		target = target + ":80"
 	}
 	s.log.Infof("Proxying request to target %s", target)
-
 	tsConn, err := s.Dial(ctx, "tcp", target)
 	if err != nil {
 		s.log.Errorf("Error dialing target %s: %v", target, err)
 		return
 	}
 	defer tsConn.Close()
-
 	if err := req.Write(tsConn); err != nil {
 		s.log.Errorf("Error forwarding request to target %s: %v", target, err)
 		return
 	}
-
 	if _, err := io.Copy(conn, tsConn); err != nil {
 		s.log.Errorf("Error forwarding response from target: %v", err)
 	}
