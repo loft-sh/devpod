@@ -7,6 +7,7 @@ import (
 
 	"sync"
 
+	"github.com/loft-sh/devpod/pkg/daemon/workspace/network"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
@@ -30,7 +31,7 @@ func RunNetworkServer(ctx context.Context, d *Daemon, errChan chan<- error, wg *
 		errChan <- fmt.Errorf("failed to refresh client: %w", err)
 		return
 	}
-	tsServer := NewWorkspaceServer(&WorkspaceServerConfig{
+	networkServer := network.NewWorkspaceServer(&network.WorkspaceServerConfig{
 		AccessKey:     d.Config.Platform.AccessKey,
 		PlatformHost:  ts.RemoveProtocol(d.Config.Platform.PlatformHost),
 		WorkspaceHost: d.Config.Platform.WorkspaceHost,
@@ -40,7 +41,7 @@ func RunNetworkServer(ctx context.Context, d *Daemon, errChan chan<- error, wg *
 			logger.Infof(format, args...)
 		},
 	}, logger)
-	if err := tsServer.Start(ctx); err != nil {
+	if err := networkServer.Start(ctx); err != nil {
 		errChan <- fmt.Errorf("network server: %w", err)
 	}
 }
