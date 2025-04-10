@@ -1,6 +1,6 @@
 //go:build linux || darwin || unix
 
-package daemon
+package local
 
 import (
 	"errors"
