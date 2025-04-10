@@ -2,6 +2,7 @@ package setup
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -447,15 +448,23 @@ func setupPlatformGitSSHKeys(userName string, platformOptions *devpod.PlatformOp
 	// write new keys
 	for i, key := range platformOptions.UserCredentials.GitSsh {
 		fileName := filepath.Join(sshFolder, fmt.Sprintf("platform_git_ssh_%d", i))
-		err = os.WriteFile(fileName, []byte(key.Key), 0600)
+
+		// base64 decode before writing to file
+		decoded, err := base64.StdEncoding.DecodeString(key.Key)
+		if err != nil {
+			log.Warnf("Error decoding platform git ssh key: %v", err)
+			continue
+		}
+		err = os.WriteFile(fileName, decoded, 0600)
 		if err != nil {
 			log.Warnf("Error writing platform git ssh key: %v", err)
-		} else {
-			err = copy2.Chown(fileName, userName)
-			// do not exit on error, we can have non-fatal errors
-			if err != nil {
-				log.Warnf("Error chowning platform git ssh keys: %v", err)
-			}
+			continue
+		}
+
+		err = copy2.Chown(fileName, userName)
+		// do not exit on error, we can have non-fatal errors
+		if err != nil {
+			log.Warnf("Error chowning platform git ssh keys: %v", err)
 		}
 	}
 
