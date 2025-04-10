@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	platformdaemon "github.com/loft-sh/devpod/pkg/daemon/platform"
-
 	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/pro/completion"
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/config"
+	locald "github.com/loft-sh/devpod/pkg/daemon/local"
 	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
@@ -64,7 +63,7 @@ func NewStatusCmd(flags *proflags.GlobalFlags) *cobra.Command {
 }
 
 func (cmd *StatusCmd) Run(ctx context.Context, devPodConfig *config.Config, provider *providerpkg.ProviderConfig) error {
-	status, err := platformdaemon.NewLocalClient(provider.Name).Status(ctx, cmd.Debug)
+	status, err := locald.NewLocalClient(provider.Name).Status(ctx, cmd.Debug)
 	if err != nil {
 		return err
 	}

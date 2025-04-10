@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
-	locald "github.com/loft-sh/devpod/pkg/daemon/platform"
+	locald "github.com/loft-sh/devpod/pkg/daemon/local"
 	workspaced "github.com/loft-sh/devpod/pkg/daemon/workspace"
 	network "github.com/loft-sh/devpod/pkg/daemon/workspace/network"
 	devpodlog "github.com/loft-sh/devpod/pkg/log"
