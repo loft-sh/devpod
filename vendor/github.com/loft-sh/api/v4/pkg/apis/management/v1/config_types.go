@@ -765,8 +765,19 @@ type CostControlSettings struct {
 	// AvgRAMPricePerNode specifies the average RAM price per node.
 	AvgRAMPricePerNode *CostControlResourcePrice `json:"averageRAMPricePerNode,omitempty"`
 
+	// GPUSettings specifies GPU related settings.
+	GPUSettings *CostControlGPUSettings `json:"gpuSettings,omitempty"`
+
 	// ControlPlanePricePerCluster specifies the price of one physical cluster.
 	ControlPlanePricePerCluster *CostControlResourcePrice `json:"controlPlanePricePerCluster,omitempty"`
+}
+
+type CostControlGPUSettings struct {
+	// Enabled specifies whether GPU settings should be available in the UI.
+	Enabled bool `json:"enabled,omitempty"`
+
+	// AvgGPUPrice specifies the average GPU price.
+	AvgGPUPrice *CostControlResourcePrice `json:"averageGPUPrice,omitempty"`
 }
 
 type CostControlResourcePrice struct {

@@ -770,7 +770,7 @@ github.com/liggitt/tabwriter
 # github.com/loft-sh/admin-apis v0.0.0-20250221182517-7499d86167d2
 ## explicit; go 1.21.1
 github.com/loft-sh/admin-apis/pkg/licenseapi
-# github.com/loft-sh/agentapi/v4 v4.3.0-devpod.alpha.25
+# github.com/loft-sh/agentapi/v4 v4.3.0-devpod.alpha.29
 ## explicit; go 1.23.1
 github.com/loft-sh/agentapi/v4/pkg/apis/loft/cluster
 github.com/loft-sh/agentapi/v4/pkg/apis/loft/cluster/v1
@@ -778,7 +778,7 @@ github.com/loft-sh/agentapi/v4/pkg/apis/loft/storage/v1
 # github.com/loft-sh/analytics-client v0.0.0-20240219162240-2f4c64b2494e
 ## explicit; go 1.21
 github.com/loft-sh/analytics-client/client
-# github.com/loft-sh/api/v4 v4.3.0-devpod.alpha.25
+# github.com/loft-sh/api/v4 v4.3.0-devpod.alpha.29
 ## explicit; go 1.23.1
 github.com/loft-sh/api/v4/pkg/apis/audit/v1
 github.com/loft-sh/api/v4/pkg/apis/management

@@ -114,13 +114,15 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&TeamList{},
 		&TeamAccessKeys{},
 		&TeamClusters{},
+		&TeamObjectPermissions{},
+		&TeamPermissions{},
 		&TranslateVClusterResourceName{},
 		&TranslateVClusterResourceNameList{},
 		&User{},
 		&UserList{},
 		&UserAccessKeys{},
 		&UserClusters{},
-		&UserDetailedPermissions{},
+		&UserObjectPermissions{},
 		&UserPermissions{},
 		&UserProfile{},
 		&VirtualClusterInstance{},
@@ -364,6 +366,18 @@ var (
 			nil,
 			management.NewTeamClustersREST,
 		),
+		builders.NewApiResourceWithStorage(
+			management.InternalTeamObjectPermissionsREST,
+			func() runtime.Object { return &TeamObjectPermissions{} }, // Register versioned resource
+			nil,
+			management.NewTeamObjectPermissionsREST,
+		),
+		builders.NewApiResourceWithStorage(
+			management.InternalTeamPermissionsREST,
+			func() runtime.Object { return &TeamPermissions{} }, // Register versioned resource
+			nil,
+			management.NewTeamPermissionsREST,
+		),
 		management.ManagementTranslateVClusterResourceNameStorage,
 		management.ManagementUserStorage,
 		builders.NewApiResourceWithStorage(
@@ -379,10 +393,10 @@ var (
 			management.NewUserClustersREST,
 		),
 		builders.NewApiResourceWithStorage(
-			management.InternalUserDetailedPermissionsREST,
-			func() runtime.Object { return &UserDetailedPermissions{} }, // Register versioned resource
+			management.InternalUserObjectPermissionsREST,
+			func() runtime.Object { return &UserObjectPermissions{} }, // Register versioned resource
 			nil,
-			management.NewUserDetailedPermissionsREST,
+			management.NewUserObjectPermissionsREST,
 		),
 		builders.NewApiResourceWithStorage(
 			management.InternalUserPermissionsREST,
@@ -976,6 +990,22 @@ type TeamClustersList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+type TeamObjectPermissionsList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []TeamObjectPermissions `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type TeamPermissionsList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []TeamPermissions `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 type TranslateVClusterResourceNameList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -1008,10 +1038,10 @@ type UserClustersList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type UserDetailedPermissionsList struct {
+type UserObjectPermissionsList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []UserDetailedPermissions `json:"items"`
+	Items           []UserObjectPermissions `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

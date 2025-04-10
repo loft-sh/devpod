@@ -1113,7 +1113,23 @@ var (
 	NewTeamClustersREST = func(getter generic.RESTOptionsGetter) rest.Storage {
 		return NewTeamClustersRESTFunc(Factory)
 	}
-	NewTeamClustersRESTFunc               NewRESTFunc
+	NewTeamClustersRESTFunc           NewRESTFunc
+	InternalTeamObjectPermissionsREST = builders.NewInternalSubresource(
+		"teams", "TeamObjectPermissions", "object-permissions",
+		func() runtime.Object { return &TeamObjectPermissions{} },
+	)
+	NewTeamObjectPermissionsREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewTeamObjectPermissionsRESTFunc(Factory)
+	}
+	NewTeamObjectPermissionsRESTFunc NewRESTFunc
+	InternalTeamPermissionsREST      = builders.NewInternalSubresource(
+		"teams", "TeamPermissions", "permissions",
+		func() runtime.Object { return &TeamPermissions{} },
+	)
+	NewTeamPermissionsREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewTeamPermissionsRESTFunc(Factory)
+	}
+	NewTeamPermissionsRESTFunc            NewRESTFunc
 	InternalTranslateVClusterResourceName = builders.NewInternalResource(
 		"translatevclusterresourcenames",
 		"TranslateVClusterResourceName",
@@ -1153,16 +1169,16 @@ var (
 	NewUserClustersREST = func(getter generic.RESTOptionsGetter) rest.Storage {
 		return NewUserClustersRESTFunc(Factory)
 	}
-	NewUserClustersRESTFunc             NewRESTFunc
-	InternalUserDetailedPermissionsREST = builders.NewInternalSubresource(
-		"users", "UserDetailedPermissions", "detailed-permissions",
-		func() runtime.Object { return &UserDetailedPermissions{} },
+	NewUserClustersRESTFunc           NewRESTFunc
+	InternalUserObjectPermissionsREST = builders.NewInternalSubresource(
+		"users", "UserObjectPermissions", "object-permissions",
+		func() runtime.Object { return &UserObjectPermissions{} },
 	)
-	NewUserDetailedPermissionsREST = func(getter generic.RESTOptionsGetter) rest.Storage {
-		return NewUserDetailedPermissionsRESTFunc(Factory)
+	NewUserObjectPermissionsREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewUserObjectPermissionsRESTFunc(Factory)
 	}
-	NewUserDetailedPermissionsRESTFunc NewRESTFunc
-	InternalUserPermissionsREST        = builders.NewInternalSubresource(
+	NewUserObjectPermissionsRESTFunc NewRESTFunc
+	InternalUserPermissionsREST      = builders.NewInternalSubresource(
 		"users", "UserPermissions", "permissions",
 		func() runtime.Object { return &UserPermissions{} },
 	)
@@ -1349,13 +1365,15 @@ var (
 		InternalTeamStatus,
 		InternalTeamAccessKeysREST,
 		InternalTeamClustersREST,
+		InternalTeamObjectPermissionsREST,
+		InternalTeamPermissionsREST,
 		InternalTranslateVClusterResourceName,
 		InternalTranslateVClusterResourceNameStatus,
 		InternalUser,
 		InternalUserStatus,
 		InternalUserAccessKeysREST,
 		InternalUserClustersREST,
-		InternalUserDetailedPermissionsREST,
+		InternalUserObjectPermissionsREST,
 		InternalUserPermissionsREST,
 		InternalUserProfileREST,
 		InternalVirtualClusterInstance,
@@ -1488,7 +1506,9 @@ type Apps struct {
 }
 
 type AssignedVia struct {
-	Team string `json:"team,omitempty"`
+	ObjectName `json:",inline"`
+	Kind       string `json:"kind,omitempty"`
+	Owner      bool   `json:"owner,omitempty"`
 }
 
 type Audit struct {
@@ -1693,6 +1713,12 @@ type ClusterAccessKey struct {
 	LoftHost          string `json:"loftHost,omitempty"`
 	Insecure          bool   `json:"insecure,omitempty"`
 	CaCert            string `json:"caCert,omitempty"`
+}
+
+type ClusterAccessRole struct {
+	ObjectName  `json:",inline"`
+	Clusters    []ObjectName `json:"clusters,omitempty"`
+	AssignedVia AssignedVia  `json:"assignedVia,omitempty"`
 }
 
 type ClusterAccessSpec struct {
@@ -1900,6 +1926,11 @@ type CostControlClusterConfig struct {
 	OpenCost *storagev1.OpenCost `json:"opencost,omitempty"`
 }
 
+type CostControlGPUSettings struct {
+	Enabled     bool                      `json:"enabled,omitempty"`
+	AvgGPUPrice *CostControlResourcePrice `json:"averageGPUPrice,omitempty"`
+}
+
 type CostControlGlobalConfig struct {
 	Metrics *storagev1.Metrics `json:"metrics,omitempty"`
 }
@@ -1913,11 +1944,8 @@ type CostControlSettings struct {
 	PriceCurrency               string                    `json:"priceCurrency,omitempty"`
 	AvgCPUPricePerNode          *CostControlResourcePrice `json:"averageCPUPricePerNode,omitempty"`
 	AvgRAMPricePerNode          *CostControlResourcePrice `json:"averageRAMPricePerNode,omitempty"`
+	GPUSettings                 *CostControlGPUSettings   `json:"gpuSettings,omitempty"`
 	ControlPlanePricePerCluster *CostControlResourcePrice `json:"controlPlanePricePerCluster,omitempty"`
-}
-
-type CurrentUserAccess struct {
-	Verbs []string `json:"verbs,omitempty"`
 }
 
 // +genclient
@@ -2278,6 +2306,11 @@ type MaintenanceWindow struct {
 	TimeWindow string `json:"timeWindow,omitempty"`
 }
 
+type ManagementRole struct {
+	ObjectName  `json:",inline"`
+	AssignedVia AssignedVia `json:"assignedVia,omitempty"`
+}
+
 type OIDC struct {
 	Enabled          bool             `json:"enabled,omitempty"`
 	WildcardRedirect bool             `json:"wildcardRedirect,omitempty"`
@@ -2305,13 +2338,19 @@ type OIDCClientSpec struct {
 type OIDCClientStatus struct {
 }
 
-type ObjectNames struct {
-	Name        string `json:"name"`
+type ObjectName struct {
+	Namespace   string `json:"namespace,omitempty"`
+	Name        string `json:"name,omitempty"`
 	DisplayName string `json:"displayName,omitempty"`
 }
 
+type ObjectPermission struct {
+	ObjectName `json:",inline"`
+	Verbs      []string `json:"verbs" protobuf:"bytes,1,rep,name=verbs"`
+}
+
 // +genclient
-// +genclient:nonNamespaced
+// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type OwnedAccessKey struct {
@@ -2411,6 +2450,12 @@ type ProjectMembers struct {
 	Users             []ProjectMember `json:"users,omitempty"`
 }
 
+type ProjectMembership struct {
+	ObjectName  `json:",inline"`
+	Role        ProjectRole `json:"role,omitempty"`
+	AssignedVia AssignedVia `json:"assignedVia,omitempty"`
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type ProjectMigrateSpaceInstance struct {
@@ -2435,6 +2480,11 @@ type ProjectMigrateVirtualClusterInstance struct {
 type ProjectMigrateVirtualClusterInstanceSource struct {
 	Name      string `json:"name,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
+}
+
+type ProjectRole struct {
+	ObjectName `json:",inline"`
+	IsAdmin    bool `json:"isAdmin,omitempty"`
 }
 
 // +genclient
@@ -2730,6 +2780,26 @@ type TeamClusters struct {
 	Clusters          []ClusterAccounts `json:"clusters,omitempty"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type TeamObjectPermissions struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	ObjectPermissions []ObjectPermission `json:"objectPermissions,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type TeamPermissions struct {
+	metav1.TypeMeta     `json:",inline"`
+	metav1.ObjectMeta   `json:"metadata,omitempty"`
+	Members             []ObjectName         `json:"members,omitempty"`
+	ProjectMemberships  []ProjectMembership  `json:"projectMemberships,omitempty"`
+	ManagementRoles     []ManagementRole     `json:"managementRoles,omitempty"`
+	ClusterAccessRoles  []ClusterAccessRole  `json:"clusterAccessRoles,omitempty"`
+	VirtualClusterRoles []VirtualClusterRole `json:"virtualClusterRoles,omitempty"`
+}
+
 type TeamSpec struct {
 	storagev1.TeamSpec `json:",inline"`
 }
@@ -2786,39 +2856,6 @@ type UserClusters struct {
 	Clusters          []ClusterAccounts `json:"clusters,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type UserDetailedPermissions struct {
-	metav1.TypeMeta     `json:",inline"`
-	metav1.ObjectMeta   `json:"metadata,omitempty"`
-	TeamMemberships     []UserDrilldownPermissionsTeam    `json:"teamMemberships,omitempty"`
-	RolesAssigned       []UserDrilldownManagementRoles    `json:"rolesAssigned,omitempty"`
-	ProjectMemberships  []UserDrilldownProjectMemberships `json:"projectMemberships,omitempty"`
-	VirtualClusterRoles []UserDrilldownVClusterRoles      `json:"virtualClusterRoles,omitempty"`
-}
-
-type UserDrilldownManagementRoles struct {
-	ObjectNames `json:",omitempty"`
-	Management  bool        `json:"management,omitempty"`
-	AssignedVia AssignedVia `json:"assignedVia,omitempty"`
-}
-
-type UserDrilldownPermissionsTeam struct {
-	ObjectNames `json:",omitempty"`
-}
-
-type UserDrilldownProjectMemberships struct {
-	ObjectNames `json:",omitempty"`
-	Role        string      `json:"role,omitempty"`
-	AssignedVia AssignedVia `json:"assignedVia,omitempty"`
-}
-
-type UserDrilldownVClusterRoles struct {
-	ObjectNames `json:",omitempty"`
-	Role        string      `json:"role,omitempty"`
-	AssignedVia AssignedVia `json:"assignedVia,omitempty"`
-}
-
 type UserInfo struct {
 	storagev1.EntityInfo `json:",inline"`
 	Teams                []*storagev1.EntityInfo `json:"teams,omitempty"`
@@ -2826,11 +2863,24 @@ type UserInfo struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type UserPermissions struct {
+type UserObjectPermissions struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	ClusterRoles      []UserPermissionsRole `json:"clusterRoles,omitempty"`
-	NamespaceRoles    []UserPermissionsRole `json:"namespaceRoles,omitempty"`
+	ObjectPermissions []ObjectPermission `json:"objectPermissions,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type UserPermissions struct {
+	metav1.TypeMeta     `json:",inline"`
+	metav1.ObjectMeta   `json:"metadata,omitempty"`
+	ClusterRoles        []UserPermissionsRole `json:"clusterRoles,omitempty"`
+	NamespaceRoles      []UserPermissionsRole `json:"namespaceRoles,omitempty"`
+	TeamMemberships     []ObjectName          `json:"teamMemberships,omitempty"`
+	ProjectMemberships  []ProjectMembership   `json:"projectMemberships,omitempty"`
+	ManagementRoles     []ManagementRole      `json:"managementRoles,omitempty"`
+	ClusterAccessRoles  []ClusterAccessRole   `json:"clusterAccessRoles,omitempty"`
+	VirtualClusterRoles []VirtualClusterRole  `json:"virtualClusterRoles,omitempty"`
 }
 
 type UserPermissionsRole struct {
@@ -2938,7 +2988,12 @@ type VirtualClusterInstanceStatus struct {
 	CanUse                                 bool                       `json:"canUse,omitempty"`
 	CanUpdate                              bool                       `json:"canUpdate,omitempty"`
 	Online                                 bool                       `json:"online,omitempty"`
-	CurrentUserAccess                      CurrentUserAccess          `json:"currentUserAccess,omitempty"`
+}
+
+type VirtualClusterRole struct {
+	ObjectName  `json:",inline"`
+	Role        string      `json:"role,omitempty"`
+	AssignedVia AssignedVia `json:"assignedVia,omitempty"`
 }
 
 // +genclient
@@ -2979,7 +3034,6 @@ type VirtualClusterTemplateSpec struct {
 type VirtualClusterTemplateStatus struct {
 	storagev1.VirtualClusterTemplateStatus `json:",inline"`
 	Apps                                   []*storagev1.EntityInfo `json:"apps,omitempty"`
-	CurrentUserAccess                      CurrentUserAccess       `json:"currentUserAccess,omitempty"`
 }
 
 // AgentAuditEvent Functions and Structs
@@ -7399,6 +7453,22 @@ type TeamClustersList struct {
 	Items           []TeamClusters `json:"items"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type TeamObjectPermissionsList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []TeamObjectPermissions `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type TeamPermissionsList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []TeamPermissions `json:"items"`
+}
+
 func (Team) NewStatus() interface{} {
 	return TeamStatus{}
 }
@@ -7655,10 +7725,10 @@ type UserClustersList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type UserDetailedPermissionsList struct {
+type UserObjectPermissionsList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []UserDetailedPermissions `json:"items"`
+	Items           []UserObjectPermissions `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
