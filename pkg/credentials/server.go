@@ -11,11 +11,9 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	locald "github.com/loft-sh/devpod/pkg/daemon/local"
-	workspaced "github.com/loft-sh/devpod/pkg/daemon/workspace"
 	network "github.com/loft-sh/devpod/pkg/daemon/workspace/network"
 	devpodlog "github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/ts"
@@ -159,19 +157,9 @@ func handleGitCredentialsOverTSNet(ctx context.Context, writer http.ResponseWrit
 	defer request.Body.Close()
 
 	log.Infof("Received git credentials post data: %s", string(bodyBytes))
-	// Set up HTTP transport that uses our network socket.
-	socketPath := filepath.Join(workspaced.RootDir, network.NetworkProxySocket)
-	transport := &http.Transport{
-		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial("unix", socketPath)
-		},
-	}
 
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   30 * time.Second, // TODO: extract this to config
-	}
-
+	// Create a DevPod network client to local credentials server
+	client := network.GetClient()
 	credServerAddress := ts.EnsureURL(clientHost, locald.LocalCredentialsServerPort)
 	targetURL := fmt.Sprintf("http://%s%s", credServerAddress, request.URL.RequestURI())
 
@@ -183,7 +171,7 @@ func handleGitCredentialsOverTSNet(ctx context.Context, writer http.ResponseWrit
 	}
 	newReq.Header = request.Header.Clone()
 
-	log.Infof("Forwarding request to %s via socket %s", targetURL, socketPath)
+	log.Infof("Forwarding request to %s", targetURL)
 
 	// Execute the request.
 	resp, err := client.Do(newReq)
