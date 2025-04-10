@@ -1,6 +1,7 @@
 package credentials
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"fmt"
@@ -8,9 +9,14 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
+	locald "github.com/loft-sh/devpod/pkg/daemon/platform"
+	workspaced "github.com/loft-sh/devpod/pkg/daemon/workspace"
+	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 )
@@ -18,6 +24,7 @@ import (
 const DefaultPort = "12049"
 const CredentialsServerPortEnv = "DEVPOD_CREDENTIALS_SERVER_PORT"
 
+// RunCredentialsServer starts a credentials server inside the DevPod workspace.
 func RunCredentialsServer(
 	ctx context.Context,
 	port int,
@@ -135,13 +142,61 @@ func handleGitCredentialsRequest(ctx context.Context, writer http.ResponseWriter
 }
 
 func handleGitCredentialsOverTSNet(ctx context.Context, writer http.ResponseWriter, request *http.Request, clientHost string, log log.Logger) error {
-	out, err := io.ReadAll(request.Body)
+	bodyBytes, err := io.ReadAll(request.Body)
 	if err != nil {
 		return errors.Wrap(err, "read request body")
 	}
-	log.Debugf("Received git credentials post data: %s", string(out))
+	defer request.Body.Close()
 
-	// TODO: implement this
+	log.Infof("Received git credentials post data: %s", string(bodyBytes))
+	// Set up HTTP transport that uses our network socket.
+	socketPath := filepath.Join(workspaced.RootDir, workspaced.TSNetProxySocket)
+	transport := &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", socketPath)
+		},
+	}
+
+	client := &http.Client{
+		Transport: transport,
+		Timeout:   30 * time.Second, // TODO: extract this to config
+	}
+
+	credServerAddress := ts.EnsureURL(clientHost, locald.LocalCredentialsServerPort)
+	targetURL := fmt.Sprintf("http://%s%s", credServerAddress, request.URL.RequestURI())
+
+	// Recreate the request to new targetURL.
+	newReq, err := http.NewRequest(request.Method, targetURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		log.Errorf("Failed to create new request: %v", err)
+		return errors.Wrap(err, "create request")
+	}
+	newReq.Header = request.Header.Clone()
+
+	log.Infof("Forwarding request to %s via socket %s", targetURL, socketPath)
+
+	// Execute the request.
+	resp, err := client.Do(newReq)
+	if err != nil {
+		log.Fatalf("HTTP request error: %v", err)
+		return errors.Wrap(err, "HTTP request error")
+	}
+	defer resp.Body.Close()
+
+	// Read the response from the forwarded request.
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Error reading response: %v", err)
+		return errors.Wrap(err, "read response")
+	}
+	log.Infof("Response: %s", string(respBody))
+
+	// Write the response back to the original response.
+	writer.WriteHeader(resp.StatusCode)
+	if _, err := writer.Write(respBody); err != nil {
+		log.Errorf("Error writing response to client: %v", err)
+		return errors.Wrap(err, "write response")
+	}
 
 	return nil
 }
