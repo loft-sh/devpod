@@ -457,17 +457,6 @@ type DevPodWorkspaceVolumeClaimSpec struct {
 	VolumeAttributesClassName *string `json:"volumeAttributesClassName,omitempty"`
 }
 
-// +enum
-type GitCloneStrategy string
-
-// WARN: Need to match https://github.com/loft-sh/devpod/pkg/git/clone.go
-const (
-	FullCloneStrategy     GitCloneStrategy = ""
-	BloblessCloneStrategy GitCloneStrategy = "blobless"
-	TreelessCloneStrategy GitCloneStrategy = "treeless"
-	ShallowCloneStrategy  GitCloneStrategy = "shallow"
-)
-
 type DevPodWorkspaceProvider struct {
 	// Name is the name of the provider. This can also be an url.
 	// +optional

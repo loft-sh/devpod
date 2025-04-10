@@ -20,7 +20,7 @@ import (
 // +subresource:request=UserProfile,path=profile,kind=UserProfile,rest=UserProfileREST
 // +subresource:request=UserAccessKeys,path=accesskeys,kind=UserAccessKeys,rest=UserAccessKeysREST
 // +subresource:request=UserPermissions,path=permissions,kind=UserPermissions,rest=UserPermissionsREST
-// +subresource:request=UserDetailedPermissions,path=detailed-permissions,kind=UserDetailedPermissions,rest=UserDetailedPermissionsREST
+// +subresource:request=UserObjectPermissions,path=object-permissions,kind=UserObjectPermissions,rest=UserObjectPermissionsREST
 type User struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

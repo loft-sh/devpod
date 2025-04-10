@@ -480,6 +480,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ClusterAccessRole)(nil), (*management.ClusterAccessRole)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_ClusterAccessRole_To_management_ClusterAccessRole(a.(*ClusterAccessRole), b.(*management.ClusterAccessRole), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.ClusterAccessRole)(nil), (*ClusterAccessRole)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_ClusterAccessRole_To_v1_ClusterAccessRole(a.(*management.ClusterAccessRole), b.(*ClusterAccessRole), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ClusterAccessSpec)(nil), (*management.ClusterAccessSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1_ClusterAccessSpec_To_management_ClusterAccessSpec(a.(*ClusterAccessSpec), b.(*management.ClusterAccessSpec), scope)
 	}); err != nil {
@@ -860,6 +870,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*CostControlGPUSettings)(nil), (*management.CostControlGPUSettings)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_CostControlGPUSettings_To_management_CostControlGPUSettings(a.(*CostControlGPUSettings), b.(*management.CostControlGPUSettings), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.CostControlGPUSettings)(nil), (*CostControlGPUSettings)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_CostControlGPUSettings_To_v1_CostControlGPUSettings(a.(*management.CostControlGPUSettings), b.(*CostControlGPUSettings), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*CostControlGlobalConfig)(nil), (*management.CostControlGlobalConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1_CostControlGlobalConfig_To_management_CostControlGlobalConfig(a.(*CostControlGlobalConfig), b.(*management.CostControlGlobalConfig), scope)
 	}); err != nil {
@@ -887,16 +907,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*management.CostControlSettings)(nil), (*CostControlSettings)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_management_CostControlSettings_To_v1_CostControlSettings(a.(*management.CostControlSettings), b.(*CostControlSettings), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*CurrentUserAccess)(nil), (*management.CurrentUserAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1_CurrentUserAccess_To_management_CurrentUserAccess(a.(*CurrentUserAccess), b.(*management.CurrentUserAccess), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*management.CurrentUserAccess)(nil), (*CurrentUserAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_management_CurrentUserAccess_To_v1_CurrentUserAccess(a.(*management.CurrentUserAccess), b.(*CurrentUserAccess), scope)
 	}); err != nil {
 		return err
 	}
@@ -1670,6 +1680,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ManagementRole)(nil), (*management.ManagementRole)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_ManagementRole_To_management_ManagementRole(a.(*ManagementRole), b.(*management.ManagementRole), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.ManagementRole)(nil), (*ManagementRole)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_ManagementRole_To_v1_ManagementRole(a.(*management.ManagementRole), b.(*ManagementRole), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*OIDC)(nil), (*management.OIDC)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1_OIDC_To_management_OIDC(a.(*OIDC), b.(*management.OIDC), scope)
 	}); err != nil {
@@ -1720,13 +1740,23 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ObjectNames)(nil), (*management.ObjectNames)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1_ObjectNames_To_management_ObjectNames(a.(*ObjectNames), b.(*management.ObjectNames), scope)
+	if err := s.AddGeneratedConversionFunc((*ObjectName)(nil), (*management.ObjectName)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_ObjectName_To_management_ObjectName(a.(*ObjectName), b.(*management.ObjectName), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*management.ObjectNames)(nil), (*ObjectNames)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_management_ObjectNames_To_v1_ObjectNames(a.(*management.ObjectNames), b.(*ObjectNames), scope)
+	if err := s.AddGeneratedConversionFunc((*management.ObjectName)(nil), (*ObjectName)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_ObjectName_To_v1_ObjectName(a.(*management.ObjectName), b.(*ObjectName), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ObjectPermission)(nil), (*management.ObjectPermission)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_ObjectPermission_To_management_ObjectPermission(a.(*ObjectPermission), b.(*management.ObjectPermission), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.ObjectPermission)(nil), (*ObjectPermission)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_ObjectPermission_To_v1_ObjectPermission(a.(*management.ObjectPermission), b.(*ObjectPermission), scope)
 	}); err != nil {
 		return err
 	}
@@ -1940,6 +1970,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ProjectMembership)(nil), (*management.ProjectMembership)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_ProjectMembership_To_management_ProjectMembership(a.(*ProjectMembership), b.(*management.ProjectMembership), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.ProjectMembership)(nil), (*ProjectMembership)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_ProjectMembership_To_v1_ProjectMembership(a.(*management.ProjectMembership), b.(*ProjectMembership), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ProjectMigrateSpaceInstance)(nil), (*management.ProjectMigrateSpaceInstance)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1_ProjectMigrateSpaceInstance_To_management_ProjectMigrateSpaceInstance(a.(*ProjectMigrateSpaceInstance), b.(*management.ProjectMigrateSpaceInstance), scope)
 	}); err != nil {
@@ -1997,6 +2037,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*management.ProjectMigrateVirtualClusterInstanceSource)(nil), (*ProjectMigrateVirtualClusterInstanceSource)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_management_ProjectMigrateVirtualClusterInstanceSource_To_v1_ProjectMigrateVirtualClusterInstanceSource(a.(*management.ProjectMigrateVirtualClusterInstanceSource), b.(*ProjectMigrateVirtualClusterInstanceSource), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ProjectRole)(nil), (*management.ProjectRole)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_ProjectRole_To_management_ProjectRole(a.(*ProjectRole), b.(*management.ProjectRole), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.ProjectRole)(nil), (*ProjectRole)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_ProjectRole_To_v1_ProjectRole(a.(*management.ProjectRole), b.(*ProjectRole), scope)
 	}); err != nil {
 		return err
 	}
@@ -2570,6 +2620,46 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*TeamObjectPermissions)(nil), (*management.TeamObjectPermissions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_TeamObjectPermissions_To_management_TeamObjectPermissions(a.(*TeamObjectPermissions), b.(*management.TeamObjectPermissions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.TeamObjectPermissions)(nil), (*TeamObjectPermissions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_TeamObjectPermissions_To_v1_TeamObjectPermissions(a.(*management.TeamObjectPermissions), b.(*TeamObjectPermissions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*TeamObjectPermissionsList)(nil), (*management.TeamObjectPermissionsList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_TeamObjectPermissionsList_To_management_TeamObjectPermissionsList(a.(*TeamObjectPermissionsList), b.(*management.TeamObjectPermissionsList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.TeamObjectPermissionsList)(nil), (*TeamObjectPermissionsList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_TeamObjectPermissionsList_To_v1_TeamObjectPermissionsList(a.(*management.TeamObjectPermissionsList), b.(*TeamObjectPermissionsList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*TeamPermissions)(nil), (*management.TeamPermissions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_TeamPermissions_To_management_TeamPermissions(a.(*TeamPermissions), b.(*management.TeamPermissions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.TeamPermissions)(nil), (*TeamPermissions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_TeamPermissions_To_v1_TeamPermissions(a.(*management.TeamPermissions), b.(*TeamPermissions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*TeamPermissionsList)(nil), (*management.TeamPermissionsList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_TeamPermissionsList_To_management_TeamPermissionsList(a.(*TeamPermissionsList), b.(*management.TeamPermissionsList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.TeamPermissionsList)(nil), (*TeamPermissionsList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_TeamPermissionsList_To_v1_TeamPermissionsList(a.(*management.TeamPermissionsList), b.(*TeamPermissionsList), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*TeamSpec)(nil), (*management.TeamSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1_TeamSpec_To_management_TeamSpec(a.(*TeamSpec), b.(*management.TeamSpec), scope)
 	}); err != nil {
@@ -2680,66 +2770,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*UserDetailedPermissions)(nil), (*management.UserDetailedPermissions)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1_UserDetailedPermissions_To_management_UserDetailedPermissions(a.(*UserDetailedPermissions), b.(*management.UserDetailedPermissions), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*management.UserDetailedPermissions)(nil), (*UserDetailedPermissions)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_management_UserDetailedPermissions_To_v1_UserDetailedPermissions(a.(*management.UserDetailedPermissions), b.(*UserDetailedPermissions), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*UserDetailedPermissionsList)(nil), (*management.UserDetailedPermissionsList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1_UserDetailedPermissionsList_To_management_UserDetailedPermissionsList(a.(*UserDetailedPermissionsList), b.(*management.UserDetailedPermissionsList), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*management.UserDetailedPermissionsList)(nil), (*UserDetailedPermissionsList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_management_UserDetailedPermissionsList_To_v1_UserDetailedPermissionsList(a.(*management.UserDetailedPermissionsList), b.(*UserDetailedPermissionsList), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*UserDrilldownManagementRoles)(nil), (*management.UserDrilldownManagementRoles)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1_UserDrilldownManagementRoles_To_management_UserDrilldownManagementRoles(a.(*UserDrilldownManagementRoles), b.(*management.UserDrilldownManagementRoles), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*management.UserDrilldownManagementRoles)(nil), (*UserDrilldownManagementRoles)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_management_UserDrilldownManagementRoles_To_v1_UserDrilldownManagementRoles(a.(*management.UserDrilldownManagementRoles), b.(*UserDrilldownManagementRoles), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*UserDrilldownPermissionsTeam)(nil), (*management.UserDrilldownPermissionsTeam)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1_UserDrilldownPermissionsTeam_To_management_UserDrilldownPermissionsTeam(a.(*UserDrilldownPermissionsTeam), b.(*management.UserDrilldownPermissionsTeam), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*management.UserDrilldownPermissionsTeam)(nil), (*UserDrilldownPermissionsTeam)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_management_UserDrilldownPermissionsTeam_To_v1_UserDrilldownPermissionsTeam(a.(*management.UserDrilldownPermissionsTeam), b.(*UserDrilldownPermissionsTeam), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*UserDrilldownProjectMemberships)(nil), (*management.UserDrilldownProjectMemberships)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1_UserDrilldownProjectMemberships_To_management_UserDrilldownProjectMemberships(a.(*UserDrilldownProjectMemberships), b.(*management.UserDrilldownProjectMemberships), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*management.UserDrilldownProjectMemberships)(nil), (*UserDrilldownProjectMemberships)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_management_UserDrilldownProjectMemberships_To_v1_UserDrilldownProjectMemberships(a.(*management.UserDrilldownProjectMemberships), b.(*UserDrilldownProjectMemberships), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*UserDrilldownVClusterRoles)(nil), (*management.UserDrilldownVClusterRoles)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1_UserDrilldownVClusterRoles_To_management_UserDrilldownVClusterRoles(a.(*UserDrilldownVClusterRoles), b.(*management.UserDrilldownVClusterRoles), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*management.UserDrilldownVClusterRoles)(nil), (*UserDrilldownVClusterRoles)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_management_UserDrilldownVClusterRoles_To_v1_UserDrilldownVClusterRoles(a.(*management.UserDrilldownVClusterRoles), b.(*UserDrilldownVClusterRoles), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*UserInfo)(nil), (*management.UserInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1_UserInfo_To_management_UserInfo(a.(*UserInfo), b.(*management.UserInfo), scope)
 	}); err != nil {
@@ -2757,6 +2787,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*management.UserList)(nil), (*UserList)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_management_UserList_To_v1_UserList(a.(*management.UserList), b.(*UserList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*UserObjectPermissions)(nil), (*management.UserObjectPermissions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_UserObjectPermissions_To_management_UserObjectPermissions(a.(*UserObjectPermissions), b.(*management.UserObjectPermissions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.UserObjectPermissions)(nil), (*UserObjectPermissions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_UserObjectPermissions_To_v1_UserObjectPermissions(a.(*management.UserObjectPermissions), b.(*UserObjectPermissions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*UserObjectPermissionsList)(nil), (*management.UserObjectPermissionsList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_UserObjectPermissionsList_To_management_UserObjectPermissionsList(a.(*UserObjectPermissionsList), b.(*management.UserObjectPermissionsList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.UserObjectPermissionsList)(nil), (*UserObjectPermissionsList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_UserObjectPermissionsList_To_v1_UserObjectPermissionsList(a.(*management.UserObjectPermissionsList), b.(*UserObjectPermissionsList), scope)
 	}); err != nil {
 		return err
 	}
@@ -3037,6 +3087,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*management.VirtualClusterInstanceStatus)(nil), (*VirtualClusterInstanceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_management_VirtualClusterInstanceStatus_To_v1_VirtualClusterInstanceStatus(a.(*management.VirtualClusterInstanceStatus), b.(*VirtualClusterInstanceStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*VirtualClusterRole)(nil), (*management.VirtualClusterRole)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_VirtualClusterRole_To_management_VirtualClusterRole(a.(*VirtualClusterRole), b.(*management.VirtualClusterRole), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.VirtualClusterRole)(nil), (*VirtualClusterRole)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_VirtualClusterRole_To_v1_VirtualClusterRole(a.(*management.VirtualClusterRole), b.(*VirtualClusterRole), scope)
 	}); err != nil {
 		return err
 	}
@@ -3601,7 +3661,11 @@ func Convert_management_Apps_To_v1_Apps(in *management.Apps, out *Apps, s conver
 }
 
 func autoConvert_v1_AssignedVia_To_management_AssignedVia(in *AssignedVia, out *management.AssignedVia, s conversion.Scope) error {
-	out.Team = in.Team
+	if err := Convert_v1_ObjectName_To_management_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	out.Kind = in.Kind
+	out.Owner = in.Owner
 	return nil
 }
 
@@ -3611,7 +3675,11 @@ func Convert_v1_AssignedVia_To_management_AssignedVia(in *AssignedVia, out *mana
 }
 
 func autoConvert_management_AssignedVia_To_v1_AssignedVia(in *management.AssignedVia, out *AssignedVia, s conversion.Scope) error {
-	out.Team = in.Team
+	if err := Convert_management_ObjectName_To_v1_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	out.Kind = in.Kind
+	out.Owner = in.Owner
 	return nil
 }
 
@@ -4387,6 +4455,38 @@ func autoConvert_management_ClusterAccessList_To_v1_ClusterAccessList(in *manage
 // Convert_management_ClusterAccessList_To_v1_ClusterAccessList is an autogenerated conversion function.
 func Convert_management_ClusterAccessList_To_v1_ClusterAccessList(in *management.ClusterAccessList, out *ClusterAccessList, s conversion.Scope) error {
 	return autoConvert_management_ClusterAccessList_To_v1_ClusterAccessList(in, out, s)
+}
+
+func autoConvert_v1_ClusterAccessRole_To_management_ClusterAccessRole(in *ClusterAccessRole, out *management.ClusterAccessRole, s conversion.Scope) error {
+	if err := Convert_v1_ObjectName_To_management_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	out.Clusters = *(*[]management.ObjectName)(unsafe.Pointer(&in.Clusters))
+	if err := Convert_v1_AssignedVia_To_management_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1_ClusterAccessRole_To_management_ClusterAccessRole is an autogenerated conversion function.
+func Convert_v1_ClusterAccessRole_To_management_ClusterAccessRole(in *ClusterAccessRole, out *management.ClusterAccessRole, s conversion.Scope) error {
+	return autoConvert_v1_ClusterAccessRole_To_management_ClusterAccessRole(in, out, s)
+}
+
+func autoConvert_management_ClusterAccessRole_To_v1_ClusterAccessRole(in *management.ClusterAccessRole, out *ClusterAccessRole, s conversion.Scope) error {
+	if err := Convert_management_ObjectName_To_v1_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	out.Clusters = *(*[]ObjectName)(unsafe.Pointer(&in.Clusters))
+	if err := Convert_management_AssignedVia_To_v1_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_management_ClusterAccessRole_To_v1_ClusterAccessRole is an autogenerated conversion function.
+func Convert_management_ClusterAccessRole_To_v1_ClusterAccessRole(in *management.ClusterAccessRole, out *ClusterAccessRole, s conversion.Scope) error {
+	return autoConvert_management_ClusterAccessRole_To_v1_ClusterAccessRole(in, out, s)
 }
 
 func autoConvert_v1_ClusterAccessSpec_To_management_ClusterAccessSpec(in *ClusterAccessSpec, out *management.ClusterAccessSpec, s conversion.Scope) error {
@@ -5341,6 +5441,28 @@ func Convert_management_CostControlClusterConfig_To_v1_CostControlClusterConfig(
 	return autoConvert_management_CostControlClusterConfig_To_v1_CostControlClusterConfig(in, out, s)
 }
 
+func autoConvert_v1_CostControlGPUSettings_To_management_CostControlGPUSettings(in *CostControlGPUSettings, out *management.CostControlGPUSettings, s conversion.Scope) error {
+	out.Enabled = in.Enabled
+	out.AvgGPUPrice = (*management.CostControlResourcePrice)(unsafe.Pointer(in.AvgGPUPrice))
+	return nil
+}
+
+// Convert_v1_CostControlGPUSettings_To_management_CostControlGPUSettings is an autogenerated conversion function.
+func Convert_v1_CostControlGPUSettings_To_management_CostControlGPUSettings(in *CostControlGPUSettings, out *management.CostControlGPUSettings, s conversion.Scope) error {
+	return autoConvert_v1_CostControlGPUSettings_To_management_CostControlGPUSettings(in, out, s)
+}
+
+func autoConvert_management_CostControlGPUSettings_To_v1_CostControlGPUSettings(in *management.CostControlGPUSettings, out *CostControlGPUSettings, s conversion.Scope) error {
+	out.Enabled = in.Enabled
+	out.AvgGPUPrice = (*CostControlResourcePrice)(unsafe.Pointer(in.AvgGPUPrice))
+	return nil
+}
+
+// Convert_management_CostControlGPUSettings_To_v1_CostControlGPUSettings is an autogenerated conversion function.
+func Convert_management_CostControlGPUSettings_To_v1_CostControlGPUSettings(in *management.CostControlGPUSettings, out *CostControlGPUSettings, s conversion.Scope) error {
+	return autoConvert_management_CostControlGPUSettings_To_v1_CostControlGPUSettings(in, out, s)
+}
+
 func autoConvert_v1_CostControlGlobalConfig_To_management_CostControlGlobalConfig(in *CostControlGlobalConfig, out *management.CostControlGlobalConfig, s conversion.Scope) error {
 	out.Metrics = (*storagev1.Metrics)(unsafe.Pointer(in.Metrics))
 	return nil
@@ -5387,6 +5509,7 @@ func autoConvert_v1_CostControlSettings_To_management_CostControlSettings(in *Co
 	out.PriceCurrency = in.PriceCurrency
 	out.AvgCPUPricePerNode = (*management.CostControlResourcePrice)(unsafe.Pointer(in.AvgCPUPricePerNode))
 	out.AvgRAMPricePerNode = (*management.CostControlResourcePrice)(unsafe.Pointer(in.AvgRAMPricePerNode))
+	out.GPUSettings = (*management.CostControlGPUSettings)(unsafe.Pointer(in.GPUSettings))
 	out.ControlPlanePricePerCluster = (*management.CostControlResourcePrice)(unsafe.Pointer(in.ControlPlanePricePerCluster))
 	return nil
 }
@@ -5400,6 +5523,7 @@ func autoConvert_management_CostControlSettings_To_v1_CostControlSettings(in *ma
 	out.PriceCurrency = in.PriceCurrency
 	out.AvgCPUPricePerNode = (*CostControlResourcePrice)(unsafe.Pointer(in.AvgCPUPricePerNode))
 	out.AvgRAMPricePerNode = (*CostControlResourcePrice)(unsafe.Pointer(in.AvgRAMPricePerNode))
+	out.GPUSettings = (*CostControlGPUSettings)(unsafe.Pointer(in.GPUSettings))
 	out.ControlPlanePricePerCluster = (*CostControlResourcePrice)(unsafe.Pointer(in.ControlPlanePricePerCluster))
 	return nil
 }
@@ -5407,26 +5531,6 @@ func autoConvert_management_CostControlSettings_To_v1_CostControlSettings(in *ma
 // Convert_management_CostControlSettings_To_v1_CostControlSettings is an autogenerated conversion function.
 func Convert_management_CostControlSettings_To_v1_CostControlSettings(in *management.CostControlSettings, out *CostControlSettings, s conversion.Scope) error {
 	return autoConvert_management_CostControlSettings_To_v1_CostControlSettings(in, out, s)
-}
-
-func autoConvert_v1_CurrentUserAccess_To_management_CurrentUserAccess(in *CurrentUserAccess, out *management.CurrentUserAccess, s conversion.Scope) error {
-	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
-	return nil
-}
-
-// Convert_v1_CurrentUserAccess_To_management_CurrentUserAccess is an autogenerated conversion function.
-func Convert_v1_CurrentUserAccess_To_management_CurrentUserAccess(in *CurrentUserAccess, out *management.CurrentUserAccess, s conversion.Scope) error {
-	return autoConvert_v1_CurrentUserAccess_To_management_CurrentUserAccess(in, out, s)
-}
-
-func autoConvert_management_CurrentUserAccess_To_v1_CurrentUserAccess(in *management.CurrentUserAccess, out *CurrentUserAccess, s conversion.Scope) error {
-	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
-	return nil
-}
-
-// Convert_management_CurrentUserAccess_To_v1_CurrentUserAccess is an autogenerated conversion function.
-func Convert_management_CurrentUserAccess_To_v1_CurrentUserAccess(in *management.CurrentUserAccess, out *CurrentUserAccess, s conversion.Scope) error {
-	return autoConvert_management_CurrentUserAccess_To_v1_CurrentUserAccess(in, out, s)
 }
 
 func autoConvert_v1_DevPodEnvironmentTemplate_To_management_DevPodEnvironmentTemplate(in *DevPodEnvironmentTemplate, out *management.DevPodEnvironmentTemplate, s conversion.Scope) error {
@@ -7312,6 +7416,36 @@ func Convert_management_MaintenanceWindow_To_v1_MaintenanceWindow(in *management
 	return autoConvert_management_MaintenanceWindow_To_v1_MaintenanceWindow(in, out, s)
 }
 
+func autoConvert_v1_ManagementRole_To_management_ManagementRole(in *ManagementRole, out *management.ManagementRole, s conversion.Scope) error {
+	if err := Convert_v1_ObjectName_To_management_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	if err := Convert_v1_AssignedVia_To_management_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1_ManagementRole_To_management_ManagementRole is an autogenerated conversion function.
+func Convert_v1_ManagementRole_To_management_ManagementRole(in *ManagementRole, out *management.ManagementRole, s conversion.Scope) error {
+	return autoConvert_v1_ManagementRole_To_management_ManagementRole(in, out, s)
+}
+
+func autoConvert_management_ManagementRole_To_v1_ManagementRole(in *management.ManagementRole, out *ManagementRole, s conversion.Scope) error {
+	if err := Convert_management_ObjectName_To_v1_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	if err := Convert_management_AssignedVia_To_v1_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_management_ManagementRole_To_v1_ManagementRole is an autogenerated conversion function.
+func Convert_management_ManagementRole_To_v1_ManagementRole(in *management.ManagementRole, out *ManagementRole, s conversion.Scope) error {
+	return autoConvert_management_ManagementRole_To_v1_ManagementRole(in, out, s)
+}
+
 func autoConvert_v1_OIDC_To_management_OIDC(in *OIDC, out *management.OIDC, s conversion.Scope) error {
 	out.Enabled = in.Enabled
 	out.WildcardRedirect = in.WildcardRedirect
@@ -7434,26 +7568,54 @@ func Convert_management_OIDCClientStatus_To_v1_OIDCClientStatus(in *management.O
 	return autoConvert_management_OIDCClientStatus_To_v1_OIDCClientStatus(in, out, s)
 }
 
-func autoConvert_v1_ObjectNames_To_management_ObjectNames(in *ObjectNames, out *management.ObjectNames, s conversion.Scope) error {
+func autoConvert_v1_ObjectName_To_management_ObjectName(in *ObjectName, out *management.ObjectName, s conversion.Scope) error {
+	out.Namespace = in.Namespace
 	out.Name = in.Name
 	out.DisplayName = in.DisplayName
 	return nil
 }
 
-// Convert_v1_ObjectNames_To_management_ObjectNames is an autogenerated conversion function.
-func Convert_v1_ObjectNames_To_management_ObjectNames(in *ObjectNames, out *management.ObjectNames, s conversion.Scope) error {
-	return autoConvert_v1_ObjectNames_To_management_ObjectNames(in, out, s)
+// Convert_v1_ObjectName_To_management_ObjectName is an autogenerated conversion function.
+func Convert_v1_ObjectName_To_management_ObjectName(in *ObjectName, out *management.ObjectName, s conversion.Scope) error {
+	return autoConvert_v1_ObjectName_To_management_ObjectName(in, out, s)
 }
 
-func autoConvert_management_ObjectNames_To_v1_ObjectNames(in *management.ObjectNames, out *ObjectNames, s conversion.Scope) error {
+func autoConvert_management_ObjectName_To_v1_ObjectName(in *management.ObjectName, out *ObjectName, s conversion.Scope) error {
+	out.Namespace = in.Namespace
 	out.Name = in.Name
 	out.DisplayName = in.DisplayName
 	return nil
 }
 
-// Convert_management_ObjectNames_To_v1_ObjectNames is an autogenerated conversion function.
-func Convert_management_ObjectNames_To_v1_ObjectNames(in *management.ObjectNames, out *ObjectNames, s conversion.Scope) error {
-	return autoConvert_management_ObjectNames_To_v1_ObjectNames(in, out, s)
+// Convert_management_ObjectName_To_v1_ObjectName is an autogenerated conversion function.
+func Convert_management_ObjectName_To_v1_ObjectName(in *management.ObjectName, out *ObjectName, s conversion.Scope) error {
+	return autoConvert_management_ObjectName_To_v1_ObjectName(in, out, s)
+}
+
+func autoConvert_v1_ObjectPermission_To_management_ObjectPermission(in *ObjectPermission, out *management.ObjectPermission, s conversion.Scope) error {
+	if err := Convert_v1_ObjectName_To_management_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	return nil
+}
+
+// Convert_v1_ObjectPermission_To_management_ObjectPermission is an autogenerated conversion function.
+func Convert_v1_ObjectPermission_To_management_ObjectPermission(in *ObjectPermission, out *management.ObjectPermission, s conversion.Scope) error {
+	return autoConvert_v1_ObjectPermission_To_management_ObjectPermission(in, out, s)
+}
+
+func autoConvert_management_ObjectPermission_To_v1_ObjectPermission(in *management.ObjectPermission, out *ObjectPermission, s conversion.Scope) error {
+	if err := Convert_management_ObjectName_To_v1_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	return nil
+}
+
+// Convert_management_ObjectPermission_To_v1_ObjectPermission is an autogenerated conversion function.
+func Convert_management_ObjectPermission_To_v1_ObjectPermission(in *management.ObjectPermission, out *ObjectPermission, s conversion.Scope) error {
+	return autoConvert_management_ObjectPermission_To_v1_ObjectPermission(in, out, s)
 }
 
 func autoConvert_v1_OwnedAccessKey_To_management_OwnedAccessKey(in *OwnedAccessKey, out *management.OwnedAccessKey, s conversion.Scope) error {
@@ -7958,6 +8120,42 @@ func Convert_management_ProjectMembersList_To_v1_ProjectMembersList(in *manageme
 	return autoConvert_management_ProjectMembersList_To_v1_ProjectMembersList(in, out, s)
 }
 
+func autoConvert_v1_ProjectMembership_To_management_ProjectMembership(in *ProjectMembership, out *management.ProjectMembership, s conversion.Scope) error {
+	if err := Convert_v1_ObjectName_To_management_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	if err := Convert_v1_ProjectRole_To_management_ProjectRole(&in.Role, &out.Role, s); err != nil {
+		return err
+	}
+	if err := Convert_v1_AssignedVia_To_management_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1_ProjectMembership_To_management_ProjectMembership is an autogenerated conversion function.
+func Convert_v1_ProjectMembership_To_management_ProjectMembership(in *ProjectMembership, out *management.ProjectMembership, s conversion.Scope) error {
+	return autoConvert_v1_ProjectMembership_To_management_ProjectMembership(in, out, s)
+}
+
+func autoConvert_management_ProjectMembership_To_v1_ProjectMembership(in *management.ProjectMembership, out *ProjectMembership, s conversion.Scope) error {
+	if err := Convert_management_ObjectName_To_v1_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	if err := Convert_management_ProjectRole_To_v1_ProjectRole(&in.Role, &out.Role, s); err != nil {
+		return err
+	}
+	if err := Convert_management_AssignedVia_To_v1_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_management_ProjectMembership_To_v1_ProjectMembership is an autogenerated conversion function.
+func Convert_management_ProjectMembership_To_v1_ProjectMembership(in *management.ProjectMembership, out *ProjectMembership, s conversion.Scope) error {
+	return autoConvert_management_ProjectMembership_To_v1_ProjectMembership(in, out, s)
+}
+
 func autoConvert_v1_ProjectMigrateSpaceInstance_To_management_ProjectMigrateSpaceInstance(in *ProjectMigrateSpaceInstance, out *management.ProjectMigrateSpaceInstance, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	if err := Convert_v1_ProjectMigrateSpaceInstanceSource_To_management_ProjectMigrateSpaceInstanceSource(&in.SourceSpaceInstance, &out.SourceSpaceInstance, s); err != nil {
@@ -8096,6 +8294,32 @@ func autoConvert_management_ProjectMigrateVirtualClusterInstanceSource_To_v1_Pro
 // Convert_management_ProjectMigrateVirtualClusterInstanceSource_To_v1_ProjectMigrateVirtualClusterInstanceSource is an autogenerated conversion function.
 func Convert_management_ProjectMigrateVirtualClusterInstanceSource_To_v1_ProjectMigrateVirtualClusterInstanceSource(in *management.ProjectMigrateVirtualClusterInstanceSource, out *ProjectMigrateVirtualClusterInstanceSource, s conversion.Scope) error {
 	return autoConvert_management_ProjectMigrateVirtualClusterInstanceSource_To_v1_ProjectMigrateVirtualClusterInstanceSource(in, out, s)
+}
+
+func autoConvert_v1_ProjectRole_To_management_ProjectRole(in *ProjectRole, out *management.ProjectRole, s conversion.Scope) error {
+	if err := Convert_v1_ObjectName_To_management_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	out.IsAdmin = in.IsAdmin
+	return nil
+}
+
+// Convert_v1_ProjectRole_To_management_ProjectRole is an autogenerated conversion function.
+func Convert_v1_ProjectRole_To_management_ProjectRole(in *ProjectRole, out *management.ProjectRole, s conversion.Scope) error {
+	return autoConvert_v1_ProjectRole_To_management_ProjectRole(in, out, s)
+}
+
+func autoConvert_management_ProjectRole_To_v1_ProjectRole(in *management.ProjectRole, out *ProjectRole, s conversion.Scope) error {
+	if err := Convert_management_ObjectName_To_v1_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	out.IsAdmin = in.IsAdmin
+	return nil
+}
+
+// Convert_management_ProjectRole_To_v1_ProjectRole is an autogenerated conversion function.
+func Convert_management_ProjectRole_To_v1_ProjectRole(in *management.ProjectRole, out *ProjectRole, s conversion.Scope) error {
+	return autoConvert_management_ProjectRole_To_v1_ProjectRole(in, out, s)
 }
 
 func autoConvert_v1_ProjectSecret_To_management_ProjectSecret(in *ProjectSecret, out *management.ProjectSecret, s conversion.Scope) error {
@@ -9569,6 +9793,102 @@ func Convert_management_TeamList_To_v1_TeamList(in *management.TeamList, out *Te
 	return autoConvert_management_TeamList_To_v1_TeamList(in, out, s)
 }
 
+func autoConvert_v1_TeamObjectPermissions_To_management_TeamObjectPermissions(in *TeamObjectPermissions, out *management.TeamObjectPermissions, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	out.ObjectPermissions = *(*[]management.ObjectPermission)(unsafe.Pointer(&in.ObjectPermissions))
+	return nil
+}
+
+// Convert_v1_TeamObjectPermissions_To_management_TeamObjectPermissions is an autogenerated conversion function.
+func Convert_v1_TeamObjectPermissions_To_management_TeamObjectPermissions(in *TeamObjectPermissions, out *management.TeamObjectPermissions, s conversion.Scope) error {
+	return autoConvert_v1_TeamObjectPermissions_To_management_TeamObjectPermissions(in, out, s)
+}
+
+func autoConvert_management_TeamObjectPermissions_To_v1_TeamObjectPermissions(in *management.TeamObjectPermissions, out *TeamObjectPermissions, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	out.ObjectPermissions = *(*[]ObjectPermission)(unsafe.Pointer(&in.ObjectPermissions))
+	return nil
+}
+
+// Convert_management_TeamObjectPermissions_To_v1_TeamObjectPermissions is an autogenerated conversion function.
+func Convert_management_TeamObjectPermissions_To_v1_TeamObjectPermissions(in *management.TeamObjectPermissions, out *TeamObjectPermissions, s conversion.Scope) error {
+	return autoConvert_management_TeamObjectPermissions_To_v1_TeamObjectPermissions(in, out, s)
+}
+
+func autoConvert_v1_TeamObjectPermissionsList_To_management_TeamObjectPermissionsList(in *TeamObjectPermissionsList, out *management.TeamObjectPermissionsList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]management.TeamObjectPermissions)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_v1_TeamObjectPermissionsList_To_management_TeamObjectPermissionsList is an autogenerated conversion function.
+func Convert_v1_TeamObjectPermissionsList_To_management_TeamObjectPermissionsList(in *TeamObjectPermissionsList, out *management.TeamObjectPermissionsList, s conversion.Scope) error {
+	return autoConvert_v1_TeamObjectPermissionsList_To_management_TeamObjectPermissionsList(in, out, s)
+}
+
+func autoConvert_management_TeamObjectPermissionsList_To_v1_TeamObjectPermissionsList(in *management.TeamObjectPermissionsList, out *TeamObjectPermissionsList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]TeamObjectPermissions)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_management_TeamObjectPermissionsList_To_v1_TeamObjectPermissionsList is an autogenerated conversion function.
+func Convert_management_TeamObjectPermissionsList_To_v1_TeamObjectPermissionsList(in *management.TeamObjectPermissionsList, out *TeamObjectPermissionsList, s conversion.Scope) error {
+	return autoConvert_management_TeamObjectPermissionsList_To_v1_TeamObjectPermissionsList(in, out, s)
+}
+
+func autoConvert_v1_TeamPermissions_To_management_TeamPermissions(in *TeamPermissions, out *management.TeamPermissions, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	out.Members = *(*[]management.ObjectName)(unsafe.Pointer(&in.Members))
+	out.ProjectMemberships = *(*[]management.ProjectMembership)(unsafe.Pointer(&in.ProjectMemberships))
+	out.ManagementRoles = *(*[]management.ManagementRole)(unsafe.Pointer(&in.ManagementRoles))
+	out.ClusterAccessRoles = *(*[]management.ClusterAccessRole)(unsafe.Pointer(&in.ClusterAccessRoles))
+	out.VirtualClusterRoles = *(*[]management.VirtualClusterRole)(unsafe.Pointer(&in.VirtualClusterRoles))
+	return nil
+}
+
+// Convert_v1_TeamPermissions_To_management_TeamPermissions is an autogenerated conversion function.
+func Convert_v1_TeamPermissions_To_management_TeamPermissions(in *TeamPermissions, out *management.TeamPermissions, s conversion.Scope) error {
+	return autoConvert_v1_TeamPermissions_To_management_TeamPermissions(in, out, s)
+}
+
+func autoConvert_management_TeamPermissions_To_v1_TeamPermissions(in *management.TeamPermissions, out *TeamPermissions, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	out.Members = *(*[]ObjectName)(unsafe.Pointer(&in.Members))
+	out.ProjectMemberships = *(*[]ProjectMembership)(unsafe.Pointer(&in.ProjectMemberships))
+	out.ManagementRoles = *(*[]ManagementRole)(unsafe.Pointer(&in.ManagementRoles))
+	out.ClusterAccessRoles = *(*[]ClusterAccessRole)(unsafe.Pointer(&in.ClusterAccessRoles))
+	out.VirtualClusterRoles = *(*[]VirtualClusterRole)(unsafe.Pointer(&in.VirtualClusterRoles))
+	return nil
+}
+
+// Convert_management_TeamPermissions_To_v1_TeamPermissions is an autogenerated conversion function.
+func Convert_management_TeamPermissions_To_v1_TeamPermissions(in *management.TeamPermissions, out *TeamPermissions, s conversion.Scope) error {
+	return autoConvert_management_TeamPermissions_To_v1_TeamPermissions(in, out, s)
+}
+
+func autoConvert_v1_TeamPermissionsList_To_management_TeamPermissionsList(in *TeamPermissionsList, out *management.TeamPermissionsList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]management.TeamPermissions)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_v1_TeamPermissionsList_To_management_TeamPermissionsList is an autogenerated conversion function.
+func Convert_v1_TeamPermissionsList_To_management_TeamPermissionsList(in *TeamPermissionsList, out *management.TeamPermissionsList, s conversion.Scope) error {
+	return autoConvert_v1_TeamPermissionsList_To_management_TeamPermissionsList(in, out, s)
+}
+
+func autoConvert_management_TeamPermissionsList_To_v1_TeamPermissionsList(in *management.TeamPermissionsList, out *TeamPermissionsList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]TeamPermissions)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_management_TeamPermissionsList_To_v1_TeamPermissionsList is an autogenerated conversion function.
+func Convert_management_TeamPermissionsList_To_v1_TeamPermissionsList(in *management.TeamPermissionsList, out *TeamPermissionsList, s conversion.Scope) error {
+	return autoConvert_management_TeamPermissionsList_To_v1_TeamPermissionsList(in, out, s)
+}
+
 func autoConvert_v1_TeamSpec_To_management_TeamSpec(in *TeamSpec, out *management.TeamSpec, s conversion.Scope) error {
 	out.TeamSpec = in.TeamSpec
 	return nil
@@ -9827,176 +10147,6 @@ func Convert_management_UserClustersList_To_v1_UserClustersList(in *management.U
 	return autoConvert_management_UserClustersList_To_v1_UserClustersList(in, out, s)
 }
 
-func autoConvert_v1_UserDetailedPermissions_To_management_UserDetailedPermissions(in *UserDetailedPermissions, out *management.UserDetailedPermissions, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	out.TeamMemberships = *(*[]management.UserDrilldownPermissionsTeam)(unsafe.Pointer(&in.TeamMemberships))
-	out.RolesAssigned = *(*[]management.UserDrilldownManagementRoles)(unsafe.Pointer(&in.RolesAssigned))
-	out.ProjectMemberships = *(*[]management.UserDrilldownProjectMemberships)(unsafe.Pointer(&in.ProjectMemberships))
-	out.VirtualClusterRoles = *(*[]management.UserDrilldownVClusterRoles)(unsafe.Pointer(&in.VirtualClusterRoles))
-	return nil
-}
-
-// Convert_v1_UserDetailedPermissions_To_management_UserDetailedPermissions is an autogenerated conversion function.
-func Convert_v1_UserDetailedPermissions_To_management_UserDetailedPermissions(in *UserDetailedPermissions, out *management.UserDetailedPermissions, s conversion.Scope) error {
-	return autoConvert_v1_UserDetailedPermissions_To_management_UserDetailedPermissions(in, out, s)
-}
-
-func autoConvert_management_UserDetailedPermissions_To_v1_UserDetailedPermissions(in *management.UserDetailedPermissions, out *UserDetailedPermissions, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	out.TeamMemberships = *(*[]UserDrilldownPermissionsTeam)(unsafe.Pointer(&in.TeamMemberships))
-	out.RolesAssigned = *(*[]UserDrilldownManagementRoles)(unsafe.Pointer(&in.RolesAssigned))
-	out.ProjectMemberships = *(*[]UserDrilldownProjectMemberships)(unsafe.Pointer(&in.ProjectMemberships))
-	out.VirtualClusterRoles = *(*[]UserDrilldownVClusterRoles)(unsafe.Pointer(&in.VirtualClusterRoles))
-	return nil
-}
-
-// Convert_management_UserDetailedPermissions_To_v1_UserDetailedPermissions is an autogenerated conversion function.
-func Convert_management_UserDetailedPermissions_To_v1_UserDetailedPermissions(in *management.UserDetailedPermissions, out *UserDetailedPermissions, s conversion.Scope) error {
-	return autoConvert_management_UserDetailedPermissions_To_v1_UserDetailedPermissions(in, out, s)
-}
-
-func autoConvert_v1_UserDetailedPermissionsList_To_management_UserDetailedPermissionsList(in *UserDetailedPermissionsList, out *management.UserDetailedPermissionsList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	out.Items = *(*[]management.UserDetailedPermissions)(unsafe.Pointer(&in.Items))
-	return nil
-}
-
-// Convert_v1_UserDetailedPermissionsList_To_management_UserDetailedPermissionsList is an autogenerated conversion function.
-func Convert_v1_UserDetailedPermissionsList_To_management_UserDetailedPermissionsList(in *UserDetailedPermissionsList, out *management.UserDetailedPermissionsList, s conversion.Scope) error {
-	return autoConvert_v1_UserDetailedPermissionsList_To_management_UserDetailedPermissionsList(in, out, s)
-}
-
-func autoConvert_management_UserDetailedPermissionsList_To_v1_UserDetailedPermissionsList(in *management.UserDetailedPermissionsList, out *UserDetailedPermissionsList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	out.Items = *(*[]UserDetailedPermissions)(unsafe.Pointer(&in.Items))
-	return nil
-}
-
-// Convert_management_UserDetailedPermissionsList_To_v1_UserDetailedPermissionsList is an autogenerated conversion function.
-func Convert_management_UserDetailedPermissionsList_To_v1_UserDetailedPermissionsList(in *management.UserDetailedPermissionsList, out *UserDetailedPermissionsList, s conversion.Scope) error {
-	return autoConvert_management_UserDetailedPermissionsList_To_v1_UserDetailedPermissionsList(in, out, s)
-}
-
-func autoConvert_v1_UserDrilldownManagementRoles_To_management_UserDrilldownManagementRoles(in *UserDrilldownManagementRoles, out *management.UserDrilldownManagementRoles, s conversion.Scope) error {
-	if err := Convert_v1_ObjectNames_To_management_ObjectNames(&in.ObjectNames, &out.ObjectNames, s); err != nil {
-		return err
-	}
-	out.Management = in.Management
-	if err := Convert_v1_AssignedVia_To_management_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1_UserDrilldownManagementRoles_To_management_UserDrilldownManagementRoles is an autogenerated conversion function.
-func Convert_v1_UserDrilldownManagementRoles_To_management_UserDrilldownManagementRoles(in *UserDrilldownManagementRoles, out *management.UserDrilldownManagementRoles, s conversion.Scope) error {
-	return autoConvert_v1_UserDrilldownManagementRoles_To_management_UserDrilldownManagementRoles(in, out, s)
-}
-
-func autoConvert_management_UserDrilldownManagementRoles_To_v1_UserDrilldownManagementRoles(in *management.UserDrilldownManagementRoles, out *UserDrilldownManagementRoles, s conversion.Scope) error {
-	if err := Convert_management_ObjectNames_To_v1_ObjectNames(&in.ObjectNames, &out.ObjectNames, s); err != nil {
-		return err
-	}
-	out.Management = in.Management
-	if err := Convert_management_AssignedVia_To_v1_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_management_UserDrilldownManagementRoles_To_v1_UserDrilldownManagementRoles is an autogenerated conversion function.
-func Convert_management_UserDrilldownManagementRoles_To_v1_UserDrilldownManagementRoles(in *management.UserDrilldownManagementRoles, out *UserDrilldownManagementRoles, s conversion.Scope) error {
-	return autoConvert_management_UserDrilldownManagementRoles_To_v1_UserDrilldownManagementRoles(in, out, s)
-}
-
-func autoConvert_v1_UserDrilldownPermissionsTeam_To_management_UserDrilldownPermissionsTeam(in *UserDrilldownPermissionsTeam, out *management.UserDrilldownPermissionsTeam, s conversion.Scope) error {
-	if err := Convert_v1_ObjectNames_To_management_ObjectNames(&in.ObjectNames, &out.ObjectNames, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1_UserDrilldownPermissionsTeam_To_management_UserDrilldownPermissionsTeam is an autogenerated conversion function.
-func Convert_v1_UserDrilldownPermissionsTeam_To_management_UserDrilldownPermissionsTeam(in *UserDrilldownPermissionsTeam, out *management.UserDrilldownPermissionsTeam, s conversion.Scope) error {
-	return autoConvert_v1_UserDrilldownPermissionsTeam_To_management_UserDrilldownPermissionsTeam(in, out, s)
-}
-
-func autoConvert_management_UserDrilldownPermissionsTeam_To_v1_UserDrilldownPermissionsTeam(in *management.UserDrilldownPermissionsTeam, out *UserDrilldownPermissionsTeam, s conversion.Scope) error {
-	if err := Convert_management_ObjectNames_To_v1_ObjectNames(&in.ObjectNames, &out.ObjectNames, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_management_UserDrilldownPermissionsTeam_To_v1_UserDrilldownPermissionsTeam is an autogenerated conversion function.
-func Convert_management_UserDrilldownPermissionsTeam_To_v1_UserDrilldownPermissionsTeam(in *management.UserDrilldownPermissionsTeam, out *UserDrilldownPermissionsTeam, s conversion.Scope) error {
-	return autoConvert_management_UserDrilldownPermissionsTeam_To_v1_UserDrilldownPermissionsTeam(in, out, s)
-}
-
-func autoConvert_v1_UserDrilldownProjectMemberships_To_management_UserDrilldownProjectMemberships(in *UserDrilldownProjectMemberships, out *management.UserDrilldownProjectMemberships, s conversion.Scope) error {
-	if err := Convert_v1_ObjectNames_To_management_ObjectNames(&in.ObjectNames, &out.ObjectNames, s); err != nil {
-		return err
-	}
-	out.Role = in.Role
-	if err := Convert_v1_AssignedVia_To_management_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1_UserDrilldownProjectMemberships_To_management_UserDrilldownProjectMemberships is an autogenerated conversion function.
-func Convert_v1_UserDrilldownProjectMemberships_To_management_UserDrilldownProjectMemberships(in *UserDrilldownProjectMemberships, out *management.UserDrilldownProjectMemberships, s conversion.Scope) error {
-	return autoConvert_v1_UserDrilldownProjectMemberships_To_management_UserDrilldownProjectMemberships(in, out, s)
-}
-
-func autoConvert_management_UserDrilldownProjectMemberships_To_v1_UserDrilldownProjectMemberships(in *management.UserDrilldownProjectMemberships, out *UserDrilldownProjectMemberships, s conversion.Scope) error {
-	if err := Convert_management_ObjectNames_To_v1_ObjectNames(&in.ObjectNames, &out.ObjectNames, s); err != nil {
-		return err
-	}
-	out.Role = in.Role
-	if err := Convert_management_AssignedVia_To_v1_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_management_UserDrilldownProjectMemberships_To_v1_UserDrilldownProjectMemberships is an autogenerated conversion function.
-func Convert_management_UserDrilldownProjectMemberships_To_v1_UserDrilldownProjectMemberships(in *management.UserDrilldownProjectMemberships, out *UserDrilldownProjectMemberships, s conversion.Scope) error {
-	return autoConvert_management_UserDrilldownProjectMemberships_To_v1_UserDrilldownProjectMemberships(in, out, s)
-}
-
-func autoConvert_v1_UserDrilldownVClusterRoles_To_management_UserDrilldownVClusterRoles(in *UserDrilldownVClusterRoles, out *management.UserDrilldownVClusterRoles, s conversion.Scope) error {
-	if err := Convert_v1_ObjectNames_To_management_ObjectNames(&in.ObjectNames, &out.ObjectNames, s); err != nil {
-		return err
-	}
-	out.Role = in.Role
-	if err := Convert_v1_AssignedVia_To_management_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1_UserDrilldownVClusterRoles_To_management_UserDrilldownVClusterRoles is an autogenerated conversion function.
-func Convert_v1_UserDrilldownVClusterRoles_To_management_UserDrilldownVClusterRoles(in *UserDrilldownVClusterRoles, out *management.UserDrilldownVClusterRoles, s conversion.Scope) error {
-	return autoConvert_v1_UserDrilldownVClusterRoles_To_management_UserDrilldownVClusterRoles(in, out, s)
-}
-
-func autoConvert_management_UserDrilldownVClusterRoles_To_v1_UserDrilldownVClusterRoles(in *management.UserDrilldownVClusterRoles, out *UserDrilldownVClusterRoles, s conversion.Scope) error {
-	if err := Convert_management_ObjectNames_To_v1_ObjectNames(&in.ObjectNames, &out.ObjectNames, s); err != nil {
-		return err
-	}
-	out.Role = in.Role
-	if err := Convert_management_AssignedVia_To_v1_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_management_UserDrilldownVClusterRoles_To_v1_UserDrilldownVClusterRoles is an autogenerated conversion function.
-func Convert_management_UserDrilldownVClusterRoles_To_v1_UserDrilldownVClusterRoles(in *management.UserDrilldownVClusterRoles, out *UserDrilldownVClusterRoles, s conversion.Scope) error {
-	return autoConvert_management_UserDrilldownVClusterRoles_To_v1_UserDrilldownVClusterRoles(in, out, s)
-}
-
 func autoConvert_v1_UserInfo_To_management_UserInfo(in *UserInfo, out *management.UserInfo, s conversion.Scope) error {
 	out.EntityInfo = in.EntityInfo
 	out.Teams = *(*[]*storagev1.EntityInfo)(unsafe.Pointer(&in.Teams))
@@ -10041,10 +10191,59 @@ func Convert_management_UserList_To_v1_UserList(in *management.UserList, out *Us
 	return autoConvert_management_UserList_To_v1_UserList(in, out, s)
 }
 
+func autoConvert_v1_UserObjectPermissions_To_management_UserObjectPermissions(in *UserObjectPermissions, out *management.UserObjectPermissions, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	out.ObjectPermissions = *(*[]management.ObjectPermission)(unsafe.Pointer(&in.ObjectPermissions))
+	return nil
+}
+
+// Convert_v1_UserObjectPermissions_To_management_UserObjectPermissions is an autogenerated conversion function.
+func Convert_v1_UserObjectPermissions_To_management_UserObjectPermissions(in *UserObjectPermissions, out *management.UserObjectPermissions, s conversion.Scope) error {
+	return autoConvert_v1_UserObjectPermissions_To_management_UserObjectPermissions(in, out, s)
+}
+
+func autoConvert_management_UserObjectPermissions_To_v1_UserObjectPermissions(in *management.UserObjectPermissions, out *UserObjectPermissions, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	out.ObjectPermissions = *(*[]ObjectPermission)(unsafe.Pointer(&in.ObjectPermissions))
+	return nil
+}
+
+// Convert_management_UserObjectPermissions_To_v1_UserObjectPermissions is an autogenerated conversion function.
+func Convert_management_UserObjectPermissions_To_v1_UserObjectPermissions(in *management.UserObjectPermissions, out *UserObjectPermissions, s conversion.Scope) error {
+	return autoConvert_management_UserObjectPermissions_To_v1_UserObjectPermissions(in, out, s)
+}
+
+func autoConvert_v1_UserObjectPermissionsList_To_management_UserObjectPermissionsList(in *UserObjectPermissionsList, out *management.UserObjectPermissionsList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]management.UserObjectPermissions)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_v1_UserObjectPermissionsList_To_management_UserObjectPermissionsList is an autogenerated conversion function.
+func Convert_v1_UserObjectPermissionsList_To_management_UserObjectPermissionsList(in *UserObjectPermissionsList, out *management.UserObjectPermissionsList, s conversion.Scope) error {
+	return autoConvert_v1_UserObjectPermissionsList_To_management_UserObjectPermissionsList(in, out, s)
+}
+
+func autoConvert_management_UserObjectPermissionsList_To_v1_UserObjectPermissionsList(in *management.UserObjectPermissionsList, out *UserObjectPermissionsList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]UserObjectPermissions)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_management_UserObjectPermissionsList_To_v1_UserObjectPermissionsList is an autogenerated conversion function.
+func Convert_management_UserObjectPermissionsList_To_v1_UserObjectPermissionsList(in *management.UserObjectPermissionsList, out *UserObjectPermissionsList, s conversion.Scope) error {
+	return autoConvert_management_UserObjectPermissionsList_To_v1_UserObjectPermissionsList(in, out, s)
+}
+
 func autoConvert_v1_UserPermissions_To_management_UserPermissions(in *UserPermissions, out *management.UserPermissions, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.ClusterRoles = *(*[]management.UserPermissionsRole)(unsafe.Pointer(&in.ClusterRoles))
 	out.NamespaceRoles = *(*[]management.UserPermissionsRole)(unsafe.Pointer(&in.NamespaceRoles))
+	out.TeamMemberships = *(*[]management.ObjectName)(unsafe.Pointer(&in.TeamMemberships))
+	out.ProjectMemberships = *(*[]management.ProjectMembership)(unsafe.Pointer(&in.ProjectMemberships))
+	out.ManagementRoles = *(*[]management.ManagementRole)(unsafe.Pointer(&in.ManagementRoles))
+	out.ClusterAccessRoles = *(*[]management.ClusterAccessRole)(unsafe.Pointer(&in.ClusterAccessRoles))
+	out.VirtualClusterRoles = *(*[]management.VirtualClusterRole)(unsafe.Pointer(&in.VirtualClusterRoles))
 	return nil
 }
 
@@ -10057,6 +10256,11 @@ func autoConvert_management_UserPermissions_To_v1_UserPermissions(in *management
 	out.ObjectMeta = in.ObjectMeta
 	out.ClusterRoles = *(*[]UserPermissionsRole)(unsafe.Pointer(&in.ClusterRoles))
 	out.NamespaceRoles = *(*[]UserPermissionsRole)(unsafe.Pointer(&in.NamespaceRoles))
+	out.TeamMemberships = *(*[]ObjectName)(unsafe.Pointer(&in.TeamMemberships))
+	out.ProjectMemberships = *(*[]ProjectMembership)(unsafe.Pointer(&in.ProjectMemberships))
+	out.ManagementRoles = *(*[]ManagementRole)(unsafe.Pointer(&in.ManagementRoles))
+	out.ClusterAccessRoles = *(*[]ClusterAccessRole)(unsafe.Pointer(&in.ClusterAccessRoles))
+	out.VirtualClusterRoles = *(*[]VirtualClusterRole)(unsafe.Pointer(&in.VirtualClusterRoles))
 	return nil
 }
 
@@ -10805,9 +11009,6 @@ func autoConvert_v1_VirtualClusterInstanceStatus_To_management_VirtualClusterIns
 	out.CanUse = in.CanUse
 	out.CanUpdate = in.CanUpdate
 	out.Online = in.Online
-	if err := Convert_v1_CurrentUserAccess_To_management_CurrentUserAccess(&in.CurrentUserAccess, &out.CurrentUserAccess, s); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -10822,15 +11023,44 @@ func autoConvert_management_VirtualClusterInstanceStatus_To_v1_VirtualClusterIns
 	out.CanUse = in.CanUse
 	out.CanUpdate = in.CanUpdate
 	out.Online = in.Online
-	if err := Convert_management_CurrentUserAccess_To_v1_CurrentUserAccess(&in.CurrentUserAccess, &out.CurrentUserAccess, s); err != nil {
-		return err
-	}
 	return nil
 }
 
 // Convert_management_VirtualClusterInstanceStatus_To_v1_VirtualClusterInstanceStatus is an autogenerated conversion function.
 func Convert_management_VirtualClusterInstanceStatus_To_v1_VirtualClusterInstanceStatus(in *management.VirtualClusterInstanceStatus, out *VirtualClusterInstanceStatus, s conversion.Scope) error {
 	return autoConvert_management_VirtualClusterInstanceStatus_To_v1_VirtualClusterInstanceStatus(in, out, s)
+}
+
+func autoConvert_v1_VirtualClusterRole_To_management_VirtualClusterRole(in *VirtualClusterRole, out *management.VirtualClusterRole, s conversion.Scope) error {
+	if err := Convert_v1_ObjectName_To_management_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	out.Role = in.Role
+	if err := Convert_v1_AssignedVia_To_management_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1_VirtualClusterRole_To_management_VirtualClusterRole is an autogenerated conversion function.
+func Convert_v1_VirtualClusterRole_To_management_VirtualClusterRole(in *VirtualClusterRole, out *management.VirtualClusterRole, s conversion.Scope) error {
+	return autoConvert_v1_VirtualClusterRole_To_management_VirtualClusterRole(in, out, s)
+}
+
+func autoConvert_management_VirtualClusterRole_To_v1_VirtualClusterRole(in *management.VirtualClusterRole, out *VirtualClusterRole, s conversion.Scope) error {
+	if err := Convert_management_ObjectName_To_v1_ObjectName(&in.ObjectName, &out.ObjectName, s); err != nil {
+		return err
+	}
+	out.Role = in.Role
+	if err := Convert_management_AssignedVia_To_v1_AssignedVia(&in.AssignedVia, &out.AssignedVia, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_management_VirtualClusterRole_To_v1_VirtualClusterRole is an autogenerated conversion function.
+func Convert_management_VirtualClusterRole_To_v1_VirtualClusterRole(in *management.VirtualClusterRole, out *VirtualClusterRole, s conversion.Scope) error {
+	return autoConvert_management_VirtualClusterRole_To_v1_VirtualClusterRole(in, out, s)
 }
 
 func autoConvert_v1_VirtualClusterSchema_To_management_VirtualClusterSchema(in *VirtualClusterSchema, out *management.VirtualClusterSchema, s conversion.Scope) error {
@@ -11006,9 +11236,6 @@ func Convert_management_VirtualClusterTemplateSpec_To_v1_VirtualClusterTemplateS
 func autoConvert_v1_VirtualClusterTemplateStatus_To_management_VirtualClusterTemplateStatus(in *VirtualClusterTemplateStatus, out *management.VirtualClusterTemplateStatus, s conversion.Scope) error {
 	out.VirtualClusterTemplateStatus = in.VirtualClusterTemplateStatus
 	out.Apps = *(*[]*storagev1.EntityInfo)(unsafe.Pointer(&in.Apps))
-	if err := Convert_v1_CurrentUserAccess_To_management_CurrentUserAccess(&in.CurrentUserAccess, &out.CurrentUserAccess, s); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -11020,9 +11247,6 @@ func Convert_v1_VirtualClusterTemplateStatus_To_management_VirtualClusterTemplat
 func autoConvert_management_VirtualClusterTemplateStatus_To_v1_VirtualClusterTemplateStatus(in *management.VirtualClusterTemplateStatus, out *VirtualClusterTemplateStatus, s conversion.Scope) error {
 	out.VirtualClusterTemplateStatus = in.VirtualClusterTemplateStatus
 	out.Apps = *(*[]*storagev1.EntityInfo)(unsafe.Pointer(&in.Apps))
-	if err := Convert_management_CurrentUserAccess_To_v1_CurrentUserAccess(&in.CurrentUserAccess, &out.CurrentUserAccess, s); err != nil {
-		return err
-	}
 	return nil
 }
 

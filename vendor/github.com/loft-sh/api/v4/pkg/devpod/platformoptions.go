@@ -1,5 +1,9 @@
 package devpod
 
+import (
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+)
+
 type PlatformOptions struct {
 	// Enabled is true if platform mode is enabled. Be careful with this option as this is only enabled
 	// when executed on the platform side and not if a platform workspace is used locally.
@@ -20,8 +24,9 @@ type PlatformOptions struct {
 	RunnerSocket  string `json:"runnerSocket,omitempty"`
 
 	// environment template options
-	EnvironmentTemplate        string `json:"environmentTemplate,omitempty"`
-	EnvironmentTemplateVersion string `json:"environmentTemplateVersion,omitempty"`
+	EnvironmentTemplate        string                     `json:"environmentTemplate,omitempty"`
+	EnvironmentTemplateVersion string                     `json:"environmentTemplateVersion,omitempty"`
+	GitCloneStrategy           storagev1.GitCloneStrategy `json:"gitCloneStrategy,omitempty"`
 
 	// Kubernetes holds configuration for workspaces that need information about their kubernetes environment, i.e.
 	// the ones running in virtual clusters or spaces

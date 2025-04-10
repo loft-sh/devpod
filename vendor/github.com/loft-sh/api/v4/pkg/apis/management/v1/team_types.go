@@ -16,6 +16,8 @@ import (
 // +resource:path=teams,rest=TeamREST
 // +subresource:request=TeamClusters,path=clusters,kind=TeamClusters,rest=TeamClustersREST
 // +subresource:request=TeamAccessKeys,path=accesskeys,kind=TeamAccessKeys,rest=TeamAccessKeysREST
+// +subresource:request=TeamPermissions,path=permissions,kind=TeamPermissions,rest=TeamPermissionsREST
+// +subresource:request=TeamObjectPermissions,path=object-permissions,kind=TeamObjectPermissions,rest=TeamObjectPermissionsREST
 type Team struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

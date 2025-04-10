@@ -87,6 +87,10 @@ type DevPodEnvironmentTemplateDefinition struct {
 	// Inline holds an inline devcontainer.json definition
 	// +optional
 	Inline string `json:"inline,omitempty"`
+
+	// WorkspaceRepositoryCloneStrategy determines how the workspaces git repository will be checked out in the pod if the workspace is git based
+	// +optional
+	WorkspaceRepositoryCloneStrategy GitCloneStrategy `json:"workspaceRepositoryCloneStrategy,omitempty"`
 }
 
 // GitEnvironmentTemplate stores configuration of Git environment template source
@@ -116,6 +120,17 @@ type DevPodEnvironmentTemplateVersion struct {
 	// +optional
 	Version string `json:"version,omitempty"`
 }
+
+// +enum
+type GitCloneStrategy string
+
+// WARN: Need to match https://github.com/loft-sh/devpod/pkg/git/clone.go
+const (
+	FullCloneStrategy     GitCloneStrategy = ""
+	BloblessCloneStrategy GitCloneStrategy = "blobless"
+	TreelessCloneStrategy GitCloneStrategy = "treeless"
+	ShallowCloneStrategy  GitCloneStrategy = "shallow"
+)
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

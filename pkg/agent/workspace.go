@@ -354,7 +354,7 @@ func CloneRepositoryForWorkspace(
 		}
 
 		// create client
-		log.Infof("Cloning repository %s in platform...", source.GitRepository)
+		log.Infof("Cloning repository %s in platform", source.GitRepository)
 		_, err = devpod.NewRunnerClient(grpcClient).Clone(ctx, &devpod.CloneRequest{
 			TargetPath: workspaceDir,
 			Options:    string(jsonOptions),
@@ -373,6 +373,9 @@ func CloneRepositoryForWorkspace(
 			return fmt.Errorf("clone repository (with gitcache): %w", err)
 		}
 	} else {
+		if options.Platform.GitCloneStrategy != "" {
+			log.Info("Using a %s clone", options.Platform.GitCloneStrategy)
+		}
 		err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, options.StrictHostKeyChecking, log, getGitOptions(options)...)
 		if err != nil {
 			// cleanup workspace dir if clone failed, otherwise we won't try to clone again when rebuilding this workspace
@@ -405,7 +408,13 @@ func CloneRepositoryForWorkspace(
 }
 
 func getGitOptions(options provider2.CLIOptions) []git.Option {
-	gitOpts := []git.Option{git.WithCloneStrategy(options.GitCloneStrategy)}
+	gitOpts := []git.Option{}
+	if options.GitCloneStrategy != "" {
+		gitOpts = append(gitOpts, git.WithCloneStrategy(options.GitCloneStrategy))
+	}
+	if options.Platform.GitCloneStrategy != "" {
+		gitOpts = append(gitOpts, git.WithCloneStrategy(git.CloneStrategy(options.Platform.GitCloneStrategy)))
+	}
 	if options.GitCloneRecursiveSubmodules {
 		gitOpts = append(gitOpts, git.WithRecursiveSubmodules())
 	}
