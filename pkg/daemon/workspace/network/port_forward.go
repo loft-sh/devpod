@@ -16,8 +16,8 @@ const (
 	// TSPortForwardPort is the fixed port on which the workspace HTTP reverse proxy listens.
 	TSPortForwardPort string = "12051"
 
-	RunnerProxySocket string = "runner-proxy.sock"
-	TSNetProxySocket  string = "devpod-net.sock"
+	RunnerProxySocket  string = "runner-proxy.sock"
+	NetworkProxySocket string = "devpod-net.sock"
 
 	netMapCooldown = 30 * time.Second
 )

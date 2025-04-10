@@ -160,7 +160,7 @@ func handleGitCredentialsOverTSNet(ctx context.Context, writer http.ResponseWrit
 
 	log.Infof("Received git credentials post data: %s", string(bodyBytes))
 	// Set up HTTP transport that uses our network socket.
-	socketPath := filepath.Join(workspaced.RootDir, network.TSNetProxySocket)
+	socketPath := filepath.Join(workspaced.RootDir, network.NetworkProxySocket)
 	transport := &http.Transport{
 		Dial: func(network, addr string) (net.Conn, error) {
 			return net.Dial("unix", socketPath)
