@@ -20,8 +20,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// RootDir is the directory used by the daemon.
 const (
+	// RootDir is the directory used by the daemon.
 	RootDir                          = "/var/devpod"
 	DaemonConfigPath                 = "/var/run/secrets/devpod/daemon_config"
 	WorkspaceDaemonConfigExtraEnvVar = "DEVPOD_WORKSPACE_DAEMON_CONFIG"
