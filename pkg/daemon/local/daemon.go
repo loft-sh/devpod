@@ -23,12 +23,12 @@ import (
 )
 
 type Daemon struct {
-	socketListener    net.Listener
-	tsServer          *tsnet.Server
-	localServer       *localServer
-	credentialsServer *LocalCredentialsServer
-	rootDir           string
-	log               log.Logger
+	socketListener         net.Listener
+	tsServer               *tsnet.Server
+	localServer            *localServer
+	credentialsServerProxy *LocalCredentialsServerProxy
+	rootDir                string
+	log                    log.Logger
 }
 
 type InitConfig struct {
@@ -63,18 +63,18 @@ func Init(ctx context.Context, config InitConfig) (*Daemon, error) {
 		return nil, fmt.Errorf("create local server: %w", err)
 	}
 
-	credentialsServer, err := NewLocalCredentialsServer(tsServer, log)
+	credentialsProxy, err := NewLocalCredentialsServerProxy(tsServer, log)
 	if err != nil {
 		return nil, fmt.Errorf("create local credentials server: %w", err)
 	}
 
 	return &Daemon{
-		socketListener:    socketListener,
-		tsServer:          tsServer,
-		localServer:       localServer,
-		credentialsServer: credentialsServer,
-		rootDir:           config.RootDir,
-		log:               log,
+		socketListener:         socketListener,
+		tsServer:               tsServer,
+		localServer:            localServer,
+		credentialsServerProxy: credentialsProxy,
+		rootDir:                config.RootDir,
+		log:                    log,
 	}, nil
 }
 func (d *Daemon) Start(ctx context.Context) error {
@@ -94,7 +94,7 @@ func (d *Daemon) Start(ctx context.Context) error {
 	}()
 	go func() {
 		d.log.Info("Start credentials server")
-		errChan <- d.credentialsServer.Listen(ctx)
+		errChan <- d.credentialsServerProxy.Listen(ctx)
 	}()
 	defer func() {
 		d.log.Info("Cleaning up daemon resources")
