@@ -14,6 +14,7 @@ import (
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/stdio"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -229,8 +230,7 @@ func buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClien
 	// create container etc.
 	result, err := tunnelserver.RunUpServer(
 		cancelCtx,
-		stdoutReader,
-		stdinWriter,
+		stdio.NewStdioListener(stdoutReader, stdinWriter, false),
 		workspaceClient.AgentInjectGitCredentials(cliOptions),
 		workspaceClient.AgentInjectDockerCredentials(cliOptions),
 		workspaceClient.WorkspaceConfig(),

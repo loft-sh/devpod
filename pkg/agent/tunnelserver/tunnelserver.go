@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,7 +23,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/netstat"
 	"github.com/loft-sh/devpod/pkg/platform"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
 	"github.com/moby/patternmatcher/ignorefile"
 	perrors "github.com/pkg/errors"
@@ -31,7 +30,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func RunServicesServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, workspace *provider2.Workspace, log log.Logger, options ...Option) error {
+func RunServicesServer(ctx context.Context, lis net.Listener, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, workspace *provider2.Workspace, log log.Logger, options ...Option) error {
 	opts := append(options, []Option{
 		WithForwarder(forwarder),
 		WithAllowGitCredentials(allowGitCredentials),
@@ -40,10 +39,10 @@ func RunServicesServer(ctx context.Context, reader io.Reader, writer io.WriteClo
 	}...)
 	tunnelServ := New(log, opts...)
 
-	return tunnelServ.Run(ctx, reader, writer)
+	return tunnelServ.Run(ctx, lis)
 }
 
-func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, log log.Logger, options ...Option) (*config.Result, error) {
+func RunUpServer(ctx context.Context, lis net.Listener, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, log log.Logger, options ...Option) (*config.Result, error) {
 	opts := append(options, []Option{
 		WithWorkspace(workspace),
 		WithAllowGitCredentials(allowGitCredentials),
@@ -51,10 +50,10 @@ func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, a
 	}...)
 	tunnelServ := New(log, opts...)
 
-	return tunnelServ.RunWithResult(ctx, reader, writer)
+	return tunnelServ.RunWithResult(ctx, lis)
 }
 
-func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, log log.Logger, options ...Option) (*config.Result, error) {
+func RunSetupServer(ctx context.Context, lis net.Listener, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, log log.Logger, options ...Option) (*config.Result, error) {
 	opts := append(options, []Option{
 		WithMounts(mounts),
 		WithAllowGitCredentials(allowGitCredentials),
@@ -64,7 +63,7 @@ func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser
 	tunnelServ := New(log, opts...)
 	tunnelServ.allowPlatformOptions = true
 
-	return tunnelServ.RunWithResult(ctx, reader, writer)
+	return tunnelServ.RunWithResult(ctx, lis)
 }
 
 func New(log log.Logger, options ...Option) *tunnelServer {
@@ -96,8 +95,7 @@ type tunnelServer struct {
 	platformOptions *devpod.PlatformOptions
 }
 
-func (t *tunnelServer) RunWithResult(ctx context.Context, reader io.Reader, writer io.WriteCloser) (*config.Result, error) {
-	lis := stdio.NewStdioListener(reader, writer, false)
+func (t *tunnelServer) RunWithResult(ctx context.Context, lis net.Listener) (*config.Result, error) {
 	s := grpc.NewServer()
 	tunnel.RegisterTunnelServer(s, t)
 	reflection.Register(s)
@@ -114,8 +112,8 @@ func (t *tunnelServer) RunWithResult(ctx context.Context, reader io.Reader, writ
 	}
 }
 
-func (t *tunnelServer) Run(ctx context.Context, reader io.Reader, writer io.WriteCloser) error {
-	_, err := t.RunWithResult(ctx, reader, writer)
+func (t *tunnelServer) Run(ctx context.Context, lis net.Listener) error {
+	_, err := t.RunWithResult(ctx, lis)
 	return err
 }
 

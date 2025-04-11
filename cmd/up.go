@@ -38,6 +38,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/devpod/pkg/telemetry"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	"github.com/loft-sh/devpod/pkg/util"
@@ -451,8 +452,7 @@ func (cmd *UpCmd) devPodUpProxy(
 	// create container etc.
 	result, err := tunnelserver.RunUpServer(
 		cancelCtx,
-		stdoutReader,
-		stdinWriter,
+		stdio.NewStdioListener(stdoutReader, stdinWriter, false),
 		true,
 		true,
 		client.WorkspaceConfig(),
@@ -571,8 +571,7 @@ func (cmd *UpCmd) devPodUpMachine(
 		func(ctx context.Context, stdin io.WriteCloser, stdout io.Reader) (*config2.Result, error) {
 			return tunnelserver.RunUpServer(
 				ctx,
-				stdout,
-				stdin,
+				stdio.NewStdioListener(stdout, stdin, false),
 				client.AgentInjectGitCredentials(cmd.CLIOptions),
 				client.AgentInjectDockerCredentials(cmd.CLIOptions),
 				client.WorkspaceConfig(),

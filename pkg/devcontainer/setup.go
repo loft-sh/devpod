@@ -20,6 +20,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/ide"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -127,8 +128,7 @@ func (r *runner) setupContainer(
 	runSetupServer := func(ctx context.Context, stdin io.WriteCloser, stdout io.Reader) (*config.Result, error) {
 		return tunnelserver.RunSetupServer(
 			ctx,
-			stdout,
-			stdin,
+			stdio.NewStdioListener(stdout, stdin, false),
 			r.WorkspaceConfig.Agent.InjectGitCredentials != "false",
 			r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
 			config.GetMounts(result),
