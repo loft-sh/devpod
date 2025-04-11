@@ -374,7 +374,10 @@ func CloneRepositoryForWorkspace(
 		}
 	} else {
 		if options.Platform.GitCloneStrategy != "" {
-			log.Info("Using a %s clone", options.Platform.GitCloneStrategy)
+			log.Infof("Using a %s clone", options.Platform.GitCloneStrategy)
+		}
+		if options.Platform.GitSkipLFS {
+			log.Info("Skipping Git LFS")
 		}
 		err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, options.StrictHostKeyChecking, log, getGitOptions(options)...)
 		if err != nil {
@@ -414,6 +417,9 @@ func getGitOptions(options provider2.CLIOptions) []git.Option {
 	}
 	if options.Platform.GitCloneStrategy != "" {
 		gitOpts = append(gitOpts, git.WithCloneStrategy(git.CloneStrategy(options.Platform.GitCloneStrategy)))
+	}
+	if options.Platform.GitSkipLFS {
+		gitOpts = append(gitOpts, git.WithSkipLFS())
 	}
 	if options.GitCloneRecursiveSubmodules {
 		gitOpts = append(gitOpts, git.WithRecursiveSubmodules())
