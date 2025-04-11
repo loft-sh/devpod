@@ -24,6 +24,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/netstat"
 	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -92,11 +93,11 @@ func RunServices(
 		go func() {
 			defer cancel()
 			defer stdinWriter.Close()
-			// forward credentials to container
+			// TODO: pass either stdio or network listener depending on whether or not we're using the platform
+			// Start local credentials server and forward credentials to container
 			err := tunnelserver.RunServicesServer(
 				cancelCtx,
-				stdoutReader,
-				stdinWriter,
+				stdio.NewStdioListener(stdoutReader, stdinWriter, false),
 				configureGitCredentials,
 				configureDockerCredentials,
 				forwarder,
