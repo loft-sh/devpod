@@ -91,6 +91,10 @@ type DevPodEnvironmentTemplateDefinition struct {
 	// WorkspaceRepositoryCloneStrategy determines how the workspaces git repository will be checked out in the pod if the workspace is git based
 	// +optional
 	WorkspaceRepositoryCloneStrategy GitCloneStrategy `json:"workspaceRepositoryCloneStrategy,omitempty"`
+
+	// WorkspaceRepositorySkipLFS specifies if git lfs will be skipped when cloning the repository into the workspace
+	// +optional
+	WorkspaceRepositorySkipLFS bool `json:"workspaceRepositorySkipLFS,omitempty"`
 }
 
 // GitEnvironmentTemplate stores configuration of Git environment template source

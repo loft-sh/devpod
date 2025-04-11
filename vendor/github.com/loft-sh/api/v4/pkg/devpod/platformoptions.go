@@ -27,6 +27,7 @@ type PlatformOptions struct {
 	EnvironmentTemplate        string                     `json:"environmentTemplate,omitempty"`
 	EnvironmentTemplateVersion string                     `json:"environmentTemplateVersion,omitempty"`
 	GitCloneStrategy           storagev1.GitCloneStrategy `json:"gitCloneStrategy,omitempty"`
+	GitSkipLFS                 bool                       `json:"gitSkipLFS,omitempty"`
 
 	// Kubernetes holds configuration for workspaces that need information about their kubernetes environment, i.e.
 	// the ones running in virtual clusters or spaces

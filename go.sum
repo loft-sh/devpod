@@ -424,10 +424,14 @@ github.com/loft-sh/admin-apis v0.0.0-20250221182517-7499d86167d2 h1:om1MqUdW84ZQ
 github.com/loft-sh/admin-apis v0.0.0-20250221182517-7499d86167d2/go.mod h1:WHCqWfljfD1hkwk41hLeqBhW2yeLvWipB1sH6vfnR7U=
 github.com/loft-sh/agentapi/v4 v4.3.0-devpod.alpha.29 h1:AAbhuBMm6ZV3OXSx8VXqCqQ9o/mOl6Hh425qZsGNUqw=
 github.com/loft-sh/agentapi/v4 v4.3.0-devpod.alpha.29/go.mod h1:zkceRmB+KkkhDMHUQO1sQdcNfF2EPxl+RsSIEOAN/R8=
+github.com/loft-sh/agentapi/v4 v4.3.0-devpod.alpha.31 h1://tt9YAWfcCydJ5d991rsYin+KxzqNC3U6S8mEN882o=
+github.com/loft-sh/agentapi/v4 v4.3.0-devpod.alpha.31/go.mod h1:zkceRmB+KkkhDMHUQO1sQdcNfF2EPxl+RsSIEOAN/R8=
 github.com/loft-sh/analytics-client v0.0.0-20240219162240-2f4c64b2494e h1:JcPnMaoczikvpasi8OJ47dCkWZjfgFubWa4V2SZo7h0=
 github.com/loft-sh/analytics-client v0.0.0-20240219162240-2f4c64b2494e/go.mod h1:FFWcGASyM2QlWTDTCG/WBVM/XYr8btqYt335TFNRCFg=
 github.com/loft-sh/api/v4 v4.3.0-devpod.alpha.29 h1:0xlQGAMwluhI6UbiDarKT21v5j/AULpxpDADdPzDxxI=
 github.com/loft-sh/api/v4 v4.3.0-devpod.alpha.29/go.mod h1:X1ho9aS6qCBMSOtIvRfjVa5htDO5UDlYyDUAKpvtY+k=
+github.com/loft-sh/api/v4 v4.3.0-devpod.alpha.31 h1:H2k4Qi7zWloBQmD6fepUaZOpzmv6A7WxAWtDOdzrQC0=
+github.com/loft-sh/api/v4 v4.3.0-devpod.alpha.31/go.mod h1:qBNf6+sIg2XNYdBWe2c16C1gjDcrKZ88sGd76oYT3Jg=
 github.com/loft-sh/apiserver v0.0.0-20250206205835-422f1d472459 h1:6SrgBtT1S9ANsQMoO/O0Mq+hs9EbC5te5kPqOBfg5UI=
 github.com/loft-sh/apiserver v0.0.0-20250206205835-422f1d472459/go.mod h1:rung3jsKjaVAtykQN0vWmFHhx2A/umpRyAae8BJVSeE=
 github.com/loft-sh/log v0.0.0-20250409101748-50124f882858 h1:MKlp3CvzXqd+a2plptpE/bKcVMb8t/7BrEuy6Yqmnaw=

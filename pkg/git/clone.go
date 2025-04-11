@@ -40,6 +40,12 @@ func WithRecursiveSubmodules() Option {
 	}
 }
 
+func WithSkipLFS() Option {
+	return func(c *cloner) {
+		c.skipLFS = true
+	}
+}
+
 func NewClonerWithOpts(options ...Option) Cloner {
 	cloner := &cloner{
 		cloneStrategy: FullCloneStrategy,
@@ -83,6 +89,7 @@ func (s *CloneStrategy) String() string {
 type cloner struct {
 	extraArgs     []string
 	cloneStrategy CloneStrategy
+	skipLFS       bool
 }
 
 var _ Cloner = &cloner{}
@@ -117,11 +124,11 @@ func (c *cloner) Clone(ctx context.Context, repository string, targetDir string,
 	args = append(args, extraArgs...)
 	args = append(args, c.extraArgs...)
 	args = append(args, repository, targetDir)
-	return run(ctx, args, extraEnv, log)
-}
-
-func run(ctx context.Context, args []string, extraEnv []string, log log.Logger) error {
 	args = append(args, "--progress")
+
+	if c.skipLFS {
+		extraEnv = append(extraEnv, "GIT_LFS_SKIP_SMUDGE=1")
+	}
 
 	w := &progressWriter{log: log, level: logrus.InfoLevel}
 	gitCommand := CommandContext(ctx, extraEnv, args...)
