@@ -30,7 +30,7 @@ type DaemonConfig struct {
 	Timeout  string                 `json:"timeout"`
 }
 
-func BuildDaemonConfig(platformOptions devpod.PlatformOptions, workspaceConfig *provider2.Workspace, substitutionContext *config.SubstitutionContext, mergedConfig *config.MergedDevContainerConfig) (*DaemonConfig, error) {
+func BuildWorkspaceDaemonConfig(platformOptions devpod.PlatformOptions, workspaceConfig *provider2.Workspace, substitutionContext *config.SubstitutionContext, mergedConfig *config.MergedDevContainerConfig) (*DaemonConfig, error) {
 	var workdir string
 	if workspaceConfig.Source.GitSubPath != "" {
 		substitutionContext.ContainerWorkspaceFolder = filepath.Join(substitutionContext.ContainerWorkspaceFolder, workspaceConfig.Source.GitSubPath)
@@ -49,6 +49,9 @@ func BuildDaemonConfig(platformOptions devpod.PlatformOptions, workspaceConfig *
 		user = "root"
 	}
 
+	// build info isn't required in the workspace and can be omitted
+	platformOptions.Build = nil
+
 	daemonConfig := &DaemonConfig{
 		Platform: platformOptions,
 		Ssh: SshConfig{
@@ -60,8 +63,8 @@ func BuildDaemonConfig(platformOptions devpod.PlatformOptions, workspaceConfig *
 	return daemonConfig, nil
 }
 
-func GetEncodedDaemonConfig(platformOptions devpod.PlatformOptions, workspaceConfig *provider2.Workspace, substitutionContext *config.SubstitutionContext, mergedConfig *config.MergedDevContainerConfig) (string, error) {
-	daemonConfig, err := BuildDaemonConfig(platformOptions, workspaceConfig, substitutionContext, mergedConfig)
+func GetEncodedWorkspaceDaemonConfig(platformOptions devpod.PlatformOptions, workspaceConfig *provider2.Workspace, substitutionContext *config.SubstitutionContext, mergedConfig *config.MergedDevContainerConfig) (string, error) {
+	daemonConfig, err := BuildWorkspaceDaemonConfig(platformOptions, workspaceConfig, substitutionContext, mergedConfig)
 	if err != nil {
 		return "", err
 	}
