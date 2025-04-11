@@ -15,7 +15,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/agent"
 	agentd "github.com/loft-sh/devpod/pkg/daemon/agent"
-	"github.com/loft-sh/devpod/pkg/devcontainer"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
@@ -25,7 +25,8 @@ import (
 )
 
 const (
-	RootDir = "/var/devpod"
+	RootDir          = "/var/devpod"
+	DaemonConfigPath = "/var/run/secrets/devpod/daemon_config"
 )
 
 type DaemonCmd struct {
@@ -133,7 +134,21 @@ func (cmd *DaemonCmd) Run(c *cobra.Command, args []string) error {
 // loadConfig loads the daemon configuration from base64-encoded JSON.
 // If a CLI-provided timeout exists, it will override the timeout in the config.
 func (cmd *DaemonCmd) loadConfig() error {
-	if encodedCfg := os.Getenv(devcontainer.WorkspaceDaemonConfigExtraEnvVar); strings.TrimSpace(encodedCfg) != "" {
+	// check local file
+	encodedCfg := ""
+	configBytes, err := os.ReadFile(DaemonConfigPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			// check environment variable
+			encodedCfg = os.Getenv(config.WorkspaceDaemonConfigExtraEnvVar)
+		} else {
+			return fmt.Errorf("get daemon config file %s: %w", DaemonConfigPath, err)
+		}
+	} else {
+		encodedCfg = string(configBytes)
+	}
+
+	if strings.TrimSpace(encodedCfg) != "" {
 		decoded, err := base64.StdEncoding.DecodeString(encodedCfg)
 		if err != nil {
 			return fmt.Errorf("error decoding daemon config: %w", err)
@@ -147,6 +162,7 @@ func (cmd *DaemonCmd) loadConfig() error {
 		}
 		cmd.Config = &cfg
 	}
+
 	return nil
 }
 

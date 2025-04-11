@@ -36,7 +36,7 @@ func (k *KubernetesDriver) EnsurePullSecret(
 		}
 
 		k.Log.Debugf("Pull secret '%s' already exists, but is outdated. Recreating...", pullSecretName)
-		err := k.DeletePullSecret(ctx, pullSecretName)
+		err := k.DeleteSecret(ctx, pullSecretName)
 		if err != nil {
 			return false, err
 		}
@@ -64,16 +64,16 @@ func (k *KubernetesDriver) ReadSecretContents(
 	return DecodeAuthTokenFromPullSecret(secret, host)
 }
 
-func (k *KubernetesDriver) DeletePullSecret(
+func (k *KubernetesDriver) DeleteSecret(
 	ctx context.Context,
-	pullSecretName string) error {
-	if !k.secretExists(ctx, pullSecretName) {
+	secretName string) error {
+	if !k.secretExists(ctx, secretName) {
 		return nil
 	}
 
-	err := k.client.Client().CoreV1().Secrets(k.namespace).Delete(ctx, pullSecretName, metav1.DeleteOptions{})
+	err := k.client.Client().CoreV1().Secrets(k.namespace).Delete(ctx, secretName, metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
-		return perrors.Wrap(err, "delete pull secret")
+		return perrors.Wrap(err, "delete secret")
 	}
 
 	return nil
@@ -89,9 +89,9 @@ func (k *KubernetesDriver) shouldRecreateSecret(ctx context.Context, dockerCrede
 
 func (k *KubernetesDriver) secretExists(
 	ctx context.Context,
-	pullSecretName string,
+	secretName string,
 ) bool {
-	_, err := k.client.Client().CoreV1().Secrets(k.namespace).Get(ctx, pullSecretName, metav1.GetOptions{})
+	_, err := k.client.Client().CoreV1().Secrets(k.namespace).Get(ctx, secretName, metav1.GetOptions{})
 	return err == nil
 }
 

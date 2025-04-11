@@ -127,10 +127,19 @@ func (k *KubernetesDriver) DeleteDevContainer(ctx context.Context, workspaceId s
 		}
 	}
 
+	// delete daemon config secret
+	if k.secretExists(ctx, getDaemonSecretName(workspaceId)) {
+		k.Log.Infof("Delete daemon config secret '%s'...", workspaceId)
+		err := k.DeleteSecret(ctx, getDaemonSecretName(workspaceId))
+		if err != nil {
+			return err
+		}
+	}
+
 	// delete pull secret
 	if k.options.KubernetesPullSecretsEnabled != "" {
 		k.Log.Infof("Delete pull secret '%s'...", workspaceId)
-		err := k.DeletePullSecret(ctx, getPullSecretsName(workspaceId))
+		err := k.DeleteSecret(ctx, getPullSecretsName(workspaceId))
 		if err != nil {
 			return err
 		}

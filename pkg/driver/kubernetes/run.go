@@ -155,7 +155,13 @@ func (k *KubernetesDriver) runContainer(
 
 	// env vars
 	envVars := []corev1.EnvVar{}
+	daemonConfig := ""
 	for k, v := range options.Env {
+		// filter out daemon config, that's going to be mounted through a secret
+		if k == config.WorkspaceDaemonConfigExtraEnvVar {
+			daemonConfig = v
+			continue
+		}
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  k,
 			Value: v,
@@ -196,6 +202,16 @@ func (k *KubernetesDriver) runContainer(
 		resources = parseResources(k.options.Resources, k.Log)
 	}
 
+	// ensure daemon config secret
+	daemonConfigSecretName := ""
+	if daemonConfig != "" {
+		daemonConfigSecretName = getDaemonSecretName(id)
+		err = k.EnsureDaemonConfigSecret(ctx, daemonConfigSecretName, daemonConfig)
+		if err != nil {
+			return err
+		}
+	}
+
 	// ensure pull secrets
 	pullSecretsCreated := false
 	if k.options.KubernetesPullSecretsEnabled == "true" {
@@ -212,8 +228,8 @@ func (k *KubernetesDriver) runContainer(
 	pod.Spec.ServiceAccountName = serviceAccount
 	pod.Spec.NodeSelector = nodeSelector
 	pod.Spec.InitContainers = initContainers
-	pod.Spec.Containers = getContainers(pod, options.Image, options.Entrypoint, options.Cmd, envVars, volumeMounts, capabilities, resources, options.Privileged, k.options.StrictSecurity)
-	pod.Spec.Volumes = getVolumes(pod, id)
+	pod.Spec.Containers = getContainers(pod, options.Image, options.Entrypoint, options.Cmd, envVars, volumeMounts, capabilities, resources, options.Privileged, k.options.StrictSecurity, daemonConfigSecretName)
+	pod.Spec.Volumes = getVolumes(pod, id, daemonConfigSecretName)
 	// avoids a problem where attaching volumes with large repositories would cause an extremely long pod startup time
 	// because changing the ownership of all files takes longer than the kubelet expects it to
 	if pod.Spec.SecurityContext == nil {
@@ -311,7 +327,12 @@ func getContainers(
 	resources corev1.ResourceRequirements,
 	privileged *bool,
 	strictSecurity string,
+	daemonConfigSecretName string,
 ) []corev1.Container {
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{
+		Name:      "devpod-daemon-config",
+		MountPath: "/var/run/secrets/devpod",
+	})
 	devPodContainer := corev1.Container{
 		Name:         DevContainerName,
 		Image:        imageName,
@@ -362,7 +383,7 @@ func getContainers(
 	return retContainers
 }
 
-func getVolumes(pod *corev1.Pod, id string) []corev1.Volume {
+func getVolumes(pod *corev1.Pod, id string, daemonConfigSecretName string) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: "devpod",
@@ -372,6 +393,17 @@ func getVolumes(pod *corev1.Pod, id string) []corev1.Volume {
 				},
 			},
 		},
+	}
+
+	if daemonConfigSecretName != "" {
+		volumes = append(volumes, corev1.Volume{
+			Name: "devpod-daemon-config",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: daemonConfigSecretName,
+				},
+			},
+		})
 	}
 
 	if pod.Spec.Volumes != nil {
@@ -465,6 +497,10 @@ func getID(workspaceID string) string {
 
 func getPullSecretsName(workspaceID string) string {
 	return fmt.Sprintf("devpod-pull-secret-%s", workspaceID)
+}
+
+func getDaemonSecretName(workspaceID string) string {
+	return fmt.Sprintf("devpod-daemon-secret-%s", workspaceID)
 }
 
 func optionsEqual(a, b *provider2.ProviderKubernetesDriverConfig) bool {

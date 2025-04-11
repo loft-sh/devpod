@@ -18,11 +18,10 @@ import (
 var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.2.0"
 
 const (
-	DevPodExtraEnvVar                = "DEVPOD"
-	RemoteContainersExtraEnvVar      = "REMOTE_CONTAINERS"
-	WorkspaceIDExtraEnvVar           = "DEVPOD_WORKSPACE_ID"
-	WorkspaceUIDExtraEnvVar          = "DEVPOD_WORKSPACE_UID"
-	WorkspaceDaemonConfigExtraEnvVar = "DEVPOD_WORKSPACE_DAEMON_CONFIG"
+	DevPodExtraEnvVar           = "DEVPOD"
+	RemoteContainersExtraEnvVar = "REMOTE_CONTAINERS"
+	WorkspaceIDExtraEnvVar      = "DEVPOD_WORKSPACE_ID"
+	WorkspaceUIDExtraEnvVar     = "DEVPOD_WORKSPACE_UID"
 
 	DefaultEntrypoint = `
 while ! command -v /usr/local/bin/devpod >/dev/null 2>&1; do
@@ -132,11 +131,11 @@ func (r *runner) runSingleContainer(
 		if options.CLIOptions.Platform.AccessKey != "" {
 			r.Log.Debugf("Platform config detected, injecting DevPod daemon entrypoint.")
 
-			data, err := agent.GetEncodedDaemonConfig(options.Platform, r.WorkspaceConfig.Workspace, substitutionContext, mergedConfig)
+			data, err := agent.GetEncodedWorkspaceDaemonConfig(options.Platform, r.WorkspaceConfig.Workspace, substitutionContext, mergedConfig)
 			if err != nil {
 				r.Log.Errorf("Failed to marshal daemon config: %v", err)
 			} else {
-				mergedConfig.ContainerEnv[WorkspaceDaemonConfigExtraEnvVar] = data
+				mergedConfig.ContainerEnv[config.WorkspaceDaemonConfigExtraEnvVar] = data
 			}
 		}
 
