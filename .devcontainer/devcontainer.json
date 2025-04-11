@@ -1,8 +1,14 @@
 {
   "name": "DevPod Development",
   "image": "ghcr.io/loft-sh/devpod:dev-6b64450abdb0ebc2ce7f663f9ff935c56679f8b6",
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest"
+    }
+  },
+
   "remoteUser": "devpod",
   "postCreateCommand": "bash ./.devcontainer/post_create.sh",
-  // Required for DinD
-  "privileged": true
+  "postStartCommand": "sudo newgrp docker"
 }

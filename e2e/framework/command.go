@@ -93,9 +93,9 @@ func (f *Framework) DevPodUp(ctx context.Context, additionalArgs ...string) erro
 	upArgs := []string{"up", "--debug", "--ide", "none"}
 	upArgs = append(upArgs, additionalArgs...)
 
-	_, _, err := f.ExecCommandCapture(ctx, upArgs)
+	stdout, stderr, err := f.ExecCommandCapture(ctx, upArgs)
 	if err != nil {
-		return fmt.Errorf("devpod up failed: %s", err.Error())
+		return fmt.Errorf("devpod up failed (command: %v): %s\nstdout: %s\nstderr: %s", upArgs, err.Error(), stdout, stderr)
 	}
 	return nil
 }

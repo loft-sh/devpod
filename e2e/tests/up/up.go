@@ -253,6 +253,10 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			// run up
 			err = f.DevPodUp(ctx, tempDir)
 			framework.ExpectNoError(err)
+			ginkgo.DeferCleanup(func() {
+				err = f.DevPodWorkspaceDelete(ctx, filepath.Base(tempDir))
+				framework.ExpectNoError(err)
+			})
 
 			// check pod is there
 			cmd := exec.Command("kubectl", "get", "pods", "-l", "devpod.sh/created=true", "-o", "json", "-n", "devpod")
