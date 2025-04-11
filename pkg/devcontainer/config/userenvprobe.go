@@ -116,7 +116,7 @@ func doProbe(ctx context.Context, userEnvProbe UserEnvProbe, preferredShell []st
 		}
 		retEnv[tokens[0]] = tokens[1]
 	}
-	if scanner.Err() != nil {
+	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("scan shell output: %w", err)
 	}
 	delete(retEnv, "PWD")
