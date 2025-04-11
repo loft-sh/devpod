@@ -159,7 +159,7 @@ func handleGitCredentialsOverTSNet(ctx context.Context, writer http.ResponseWrit
 	log.Infof("Received git credentials post data: %s", string(bodyBytes))
 
 	// Create a DevPod network client to local credentials server
-	client := network.GetClient()
+	client := network.GetHTTPClient()
 	credServerAddress := ts.EnsureURL(clientHost, locald.LocalCredentialsServerPort)
 	targetURL := fmt.Sprintf("http://%s%s", credServerAddress, request.URL.RequestURI())
 
