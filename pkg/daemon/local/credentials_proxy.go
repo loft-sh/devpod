@@ -4,123 +4,128 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"time"
 
 	"github.com/loft-sh/log"
+	"github.com/mwitkow/grpc-proxy/proxy"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"tailscale.com/tsnet"
 )
 
 const (
-	// Listen on this port via tsnet.
-	LocalCredentialsServerPort = 9999 // FIXME - use random prot
-	// Target server: local gRPC server running on port 5555.
-	TargetServer = "http://localhost:5555" // FIXME - get port from request
+	LocalCredentialsServerPort int    = 9999
+	DefaultTargetHost          string = "localhost"
 )
 
-// LocalCredentialsServerProxy acts as a reverse proxy that blindly forwards
-// all incoming traffic to the local gRPC server on port 5555.
 type LocalCredentialsServerProxy struct {
-	log      log.Logger
-	tsServer *tsnet.Server
-
-	ln  net.Listener
-	srv *http.Server
+	log        log.Logger
+	tsServer   *tsnet.Server
+	grpcServer *grpc.Server
+	ln         net.Listener
 }
 
-// NewLocalCredentialsServerProxy initializes a new LocalCredentialsServerProxy.
-func NewLocalCredentialsServerProxy(tsServer *tsnet.Server, log log.Logger) (*LocalCredentialsServerProxy, error) {
+func NewLocalCredentialsServerProxy(tsServer *tsnet.Server, logger log.Logger) (*LocalCredentialsServerProxy, error) {
+	logger.Infof("NewLocalCredentialsServerProxy: initializing local reverse proxy")
+	if tsServer == nil {
+		return nil, fmt.Errorf("tsnet.Server cannot be nil")
+	}
 	return &LocalCredentialsServerProxy{
-		log:      log,
+		log:      logger,
 		tsServer: tsServer,
 	}, nil
 }
 
-// Listen creates the tsnet listener and HTTP server,
-// and registers a catch-all handler that acts as the reverse proxy.
 func (s *LocalCredentialsServerProxy) Listen(ctx context.Context) error {
-	s.log.Info("Starting reverse proxy for local gRPC server")
+	s.log.Infof("LocalCredentialsServerProxy: Starting reverse proxy on tsnet port %d", LocalCredentialsServerPort)
 
-	// Create a tsnet listener.
-	ln, err := s.tsServer.Listen("tcp", fmt.Sprintf(":%d", LocalCredentialsServerPort))
+	listenAddr := fmt.Sprintf(":%d", LocalCredentialsServerPort)
+	ln, err := s.tsServer.Listen("tcp", listenAddr)
 	if err != nil {
-		s.log.Infof("Failed to listen on tsnet port %d: %v", LocalCredentialsServerPort, err)
-		return fmt.Errorf("failed to listen on tsnet port %d: %w", LocalCredentialsServerPort, err)
+		s.log.Errorf("LocalCredentialsServerProxy: Failed to listen on tsnet %s: %v", listenAddr, err)
+		return fmt.Errorf("failed to listen on tsnet %s: %w", listenAddr, err)
 	}
 	s.ln = ln
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", s.handleReverseProxy)
+	s.log.Infof("LocalCredentialsServerProxy: tsnet listener started on %s", ln.Addr().String())
 
-	// Create the HTTP server.
-	s.srv = &http.Server{
-		Handler: mux,
-	}
-
-	go func() {
-		<-ctx.Done()
-		s.log.Info("Context canceled, shutting down reverse proxy")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := s.srv.Shutdown(shutdownCtx); err != nil {
-			s.log.Errorf("Error shutting down reverse proxy: %v", err)
+	director := func(ctx context.Context, fullMethodName string) (context.Context, *grpc.ClientConn, error) {
+		md, ok := metadata.FromIncomingContext(ctx)
+		if !ok {
+			return nil, nil, status.Errorf(codes.InvalidArgument, "missing metadata")
 		}
-	}()
 
-	s.log.Infof("Reverse proxy listening on tsnet port %d", LocalCredentialsServerPort)
-	err = s.srv.Serve(ln)
-	if err != nil && err != http.ErrServerClosed {
-		s.log.Errorf("Reverse proxy error: %v", err)
-		return err
+		// Get the target port from metadata. Host is always localhost.
+		targetPorts := md.Get("x-target-port")
+		if len(targetPorts) == 0 {
+			s.log.Error("LocalCredentialsServerProxy: Director missing x-target-port metadata")
+			return nil, nil, status.Errorf(codes.InvalidArgument, "missing x-target-port metadata")
+		}
+		// targetPort := targetPorts[0]
+		targetPort := "4795" // FIXME
+
+		targetAddr := net.JoinHostPort(DefaultTargetHost, targetPort)
+
+		s.log.Infof("[LocalCredentialsServerProxy] [gRPC] Proxying call %q to target %s", fullMethodName, targetAddr)
+
+		conn, err := grpc.DialContext(ctx, targetAddr,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithCodec(proxy.Codec()), // Use proxy codec for transparency
+		)
+		if err != nil {
+			s.log.Errorf("[LocalCredentialsServerProxy] [gRPC] Failed to dial local target backend %s: %v", targetAddr, err)
+			return nil, nil, status.Errorf(codes.Internal, "failed to dial local target backend: %v", err)
+		}
+
+		return ctx, conn, nil
 	}
 
-	return nil
-}
+	// Create the gRPC server using the transparent handler.
+	// It will forward any unknown service call based on the director logic.
+	s.grpcServer = grpc.NewServer(
+		grpc.UnknownServiceHandler(proxy.TransparentHandler(director)),
+	)
 
-// handleReverseProxy forwards every request to the target gRPC server.
-func (s *LocalCredentialsServerProxy) handleReverseProxy(w http.ResponseWriter, r *http.Request) {
-	s.log.Infof("Forwarding request %s %s to target server", r.Method, r.URL.String())
+	s.log.Infof("LocalCredentialsServerProxy: gRPC reverse proxy configured, starting server on %s", ln.Addr().String())
 
-	// Parse the target URL.
-	targetURL, err := url.Parse(TargetServer)
-	if err != nil {
-		s.log.Errorf("Error parsing target URL %s: %v", TargetServer, err)
-		http.Error(w, "Bad Gateway", http.StatusBadGateway)
-		return
-	}
-
-	// Create the reverse proxy.
-	proxy := httputil.NewSingleHostReverseProxy(targetURL)
-
-	// Customize the director to forward the Host header to the target.
-	originalDirector := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		originalDirector(req)
-		req.Host = targetURL.Host
-	}
-
-	// Use an error handler to log any errors that occur.
-	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		s.log.Errorf("Reverse proxy error: %v", err)
-		http.Error(w, "Bad Gateway", http.StatusBadGateway)
-	}
-
-	// Forward the request.
-	proxy.ServeHTTP(w, r)
-}
-
-// Close gracefully shuts down the reverse proxy.
-func (s *LocalCredentialsServerProxy) Close() error {
-	s.log.Info("Closing reverse proxy")
-	if s.srv != nil {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := s.srv.Shutdown(shutdownCtx); err != nil {
-			s.log.Errorf("Error during reverse proxy shutdown: %v", err)
-			return err
+	if err := s.grpcServer.Serve(s.ln); err != nil {
+		if err.Error() != "grpc: the server has been stopped" {
+			s.log.Errorf("LocalCredentialsServerProxy: failed to serve: %v", err)
+			return fmt.Errorf("gRPC server error: %w", err)
+		} else {
+			s.log.Infof("LocalCredentialsServerProxy: gRPC server stopped gracefully.")
 		}
 	}
 	return nil
+}
+
+func (s *LocalCredentialsServerProxy) Stop() {
+	s.log.Info("LocalCredentialsServerProxy: Stopping reverse proxy...")
+	if s.grpcServer != nil {
+		stopped := make(chan struct{})
+		go func() {
+			s.grpcServer.GracefulStop()
+			close(stopped)
+		}()
+
+		select {
+		case <-time.After(10 * time.Second):
+			s.log.Warnf("LocalCredentialsServerProxy: Graceful shutdown timed out after 10 seconds, forcing stop.")
+			s.grpcServer.Stop()
+		case <-stopped:
+			s.log.Infof("LocalCredentialsServerProxy: gRPC server stopped gracefully.")
+		}
+	}
+
+	if s.ln != nil {
+		if err := s.ln.Close(); err != nil {
+			s.log.Errorf("LocalCredentialsServerProxy: Error closing listener: %v", err)
+		} else {
+			s.log.Infof("LocalCredentialsServerProxy: Listener closed.")
+		}
+	}
+	s.log.Info("LocalCredentialsServerProxy: Reverse proxy stopped.")
 }

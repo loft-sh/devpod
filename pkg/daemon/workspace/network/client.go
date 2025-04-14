@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -14,10 +15,16 @@ func Dial() (net.Conn, error) {
 	return net.Dial("unix", socketPath)
 }
 
-// GetCOntextDialer returns ContextDialer interface function that uses our network socket.
+// GetContextDialer returns ContextDialer interface function that uses our network socket.
 func GetContextDialer() func(ctx context.Context, addr string) (net.Conn, error) {
-	return func(ctx context.Context, addr string) (net.Conn, error) {
-		return Dial()
+	// The 'addr' argument passed by grpc.DialContext is ignored here,
+	// as we always dial the fixed unix socket path.
+	return func(ctx context.Context, _ string) (net.Conn, error) {
+		conn, err := Dial()
+		if err != nil {
+			return nil, fmt.Errorf("failed to dial proxy socket: %w", err)
+		}
+		return conn, nil
 	}
 }
 
@@ -25,13 +32,17 @@ func GetContextDialer() func(ctx context.Context, addr string) (net.Conn, error)
 func GetHTTPTransport() *http.Transport {
 	// Set up HTTP transport that uses our network socket.
 	return &http.Transport{
-		Dial: func(network, addr string) (net.Conn, error) {
-			return Dial()
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			conn, err := Dial()
+			if err != nil {
+				return nil, fmt.Errorf("failed to dial proxy socket via http transport: %w", err)
+			}
+			return conn, nil
 		},
 	}
 }
 
-// GetClient returns a new HTTP client that uses our network socket for transport.
+// GetHTTPClient returns a new HTTP client that uses our network socket for transport.
 func GetHTTPClient() *http.Client {
 	return &http.Client{
 		Transport: GetHTTPTransport(),

@@ -13,12 +13,14 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/credentials"
+	locald "github.com/loft-sh/devpod/pkg/daemon/local"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/gitsshsigning"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	portpkg "github.com/loft-sh/devpod/pkg/port"
 	"github.com/loft-sh/log"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -69,10 +71,23 @@ func NewCredentialsServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 // Run runs the command logic
 func (cmd *CredentialsServerCmd) Run(ctx context.Context, port int) error {
+	var tunnelClient tunnel.TunnelClient
+	var err error
+	fileLogger := log.NewFileLogger("/tmp/credentials_server_cmd.log", logrus.DebugLevel)
 	// create a grpc client
-	tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true, ExitCodeIO)
-	if err != nil {
-		return fmt.Errorf("error creating tunnel client: %w", err)
+	// if we have client address, lets use the http client
+	if cmd.Client != "" {
+		// address := ts.EnsureURL(cmd.Client, locald.LocalCredentialsServerPort)
+		tunnelClient, err = tunnelserver.NewHTTPTunnelClient(cmd.Client, fmt.Sprintf("%d", locald.LocalCredentialsServerPort), fileLogger)
+		if err != nil {
+			return fmt.Errorf("error creating tunnel client: %w", err)
+		}
+	} else {
+		// otherwise we fallback to stdio client
+		tunnelClient, err = tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true, ExitCodeIO)
+		if err != nil {
+			return fmt.Errorf("error creating tunnel client: %w", err)
+		}
 	}
 
 	// this message serves as a ping to the client

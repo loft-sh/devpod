@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -23,12 +24,28 @@ import (
 	"github.com/loft-sh/devpod/pkg/netstat"
 	"github.com/loft-sh/devpod/pkg/platform"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
 	"github.com/moby/patternmatcher/ignorefile"
 	perrors "github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
+
+// GetListener returns correct listener for services server - either stdio or tcp
+func GetListener(client string, reader io.Reader, writer io.WriteCloser, exitOnClose bool, log log.Logger) (net.Listener, error) {
+	if client == "" {
+		log.Info("GetListener - returning stdio listener")
+		return stdio.NewStdioListener(reader, writer, exitOnClose), nil
+	}
+	log.Info("GetListener - returning tcp listener")
+	listener, err := net.Listen("tcp", ":4795") // FIXME
+	if err != nil {
+		return nil, err
+	}
+
+	return listener, nil
+}
 
 func RunServicesServer(ctx context.Context, lis net.Listener, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, workspace *provider2.Workspace, log log.Logger, options ...Option) error {
 	opts := append(options, []Option{

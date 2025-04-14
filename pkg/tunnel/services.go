@@ -24,7 +24,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/netstat"
 	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
-	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -93,11 +92,17 @@ func RunServices(
 		go func() {
 			defer cancel()
 			defer stdinWriter.Close()
-			// TODO: pass either stdio or network listener depending on whether or not we're using the platform
-			// Start local credentials server and forward credentials to container
-			err := tunnelserver.RunServicesServer(
+			listener, err := tunnelserver.GetListener(client, stdoutReader, stdinWriter, false, log)
+			if err != nil {
+				errChan <- errors.Wrap(err, "create tunnel server listener")
+			}
+			log.Infof("DEBUG GRPC - GOT LISTENER FOR LOCAL SERVER - %v\n", listener)
+			defer listener.Close()
+
+			// Start local credentials server on clients machine and forward credentials to container
+			err = tunnelserver.RunServicesServer(
 				cancelCtx,
-				stdio.NewStdioListener(stdoutReader, stdinWriter, false),
+				listener,
 				configureGitCredentials,
 				configureDockerCredentials,
 				forwarder,
