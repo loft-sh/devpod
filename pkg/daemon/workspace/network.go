@@ -37,8 +37,10 @@ func RunNetworkServer(ctx context.Context, d *Daemon, errChan chan<- error, wg *
 		WorkspaceHost: d.Config.Platform.WorkspaceHost,
 		Client:        baseClient,
 		RootDir:       rootDir,
-		LogF: func(format string, args ...interface{}) {
-			logger.Infof(format, args...)
+		LogF: func(format string, args ...any) {
+			if logger.GetLevel() == logrus.DebugLevel {
+				logger.Debugf(format, args...)
+			}
 		},
 	}, logger)
 	if err := networkServer.Start(ctx); err != nil {
