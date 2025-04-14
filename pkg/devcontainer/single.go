@@ -131,7 +131,7 @@ func (r *runner) runSingleContainer(
 		if options.CLIOptions.Platform.AccessKey != "" {
 			r.Log.Debugf("Platform config detected, injecting DevPod daemon entrypoint.")
 
-			data, err := workspaced.GetEncodedDaemonConfig(options.Platform, r.WorkspaceConfig.Workspace, substitutionContext, mergedConfig)
+			data, err := workspaced.GetEncodedWorkspaceDaemonConfig(options.Platform, r.WorkspaceConfig.Workspace, substitutionContext, mergedConfig)
 			if err != nil {
 				r.Log.Errorf("Failed to marshal daemon config: %v", err)
 			} else {

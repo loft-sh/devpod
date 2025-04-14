@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	workspaced "github.com/loft-sh/devpod/pkg/daemon/workspace"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -145,7 +144,7 @@ func (cmd *Daemon) loadConfig() error {
 		if err != nil {
 			return fmt.Errorf("error decoding daemon config: %w", err)
 		}
-		var cfg workspaced.DaemonConfig
+		var cfg DaemonConfig
 		if err = json.Unmarshal(decoded, &cfg); err != nil {
 			return fmt.Errorf("error unmarshalling daemon config: %w", err)
 		}
