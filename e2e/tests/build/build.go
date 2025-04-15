@@ -108,7 +108,7 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			info := &config.ImageBuildInfo{Dockerfile: file}
 
 			// make sure images are there
-			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, info, log.Default)
+			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/"+runtime.GOARCH, runtime.GOARCH, filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, info, log.Default)
 			framework.ExpectNoError(err)
 			_, err = dockerHelper.InspectImage(ctx, build.GetImageName(tempDir, prebuildHash), false)
 			framework.ExpectNoError(err)

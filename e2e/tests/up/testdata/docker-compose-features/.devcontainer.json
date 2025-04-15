@@ -1,11 +1,11 @@
 {
-	"name": "Go",
-	"dockerComposeFile": "./docker-compose.yaml",
-	"service": "app",
-	"workspaceFolder": "/workspaces",
-	"features": {
-		"ghcr.io/rio/features/vcluster:0": {
-			"version": "v0.15.2"
-		}
-	}
+  "name": "Go",
+  "dockerComposeFile": "./docker-compose.yaml",
+  "service": "app",
+  "workspaceFolder": "/workspaces",
+  "features": {
+    "ghcr.io/loft-sh/devcontainer-features/vcluster:1.0.1": {
+      "version": "v0.24.1"
+    }
+  }
 }

@@ -27,8 +27,6 @@ func (r *runner) build(
 	substitutionContext *config.SubstitutionContext,
 	options provider.BuildOptions,
 ) (*config.BuildInfo, error) {
-	defer cleanupBuildInformation(parsedConfig.Config)
-
 	if isDockerFileConfig(parsedConfig.Config) {
 		return r.buildAndExtendImage(ctx, parsedConfig, substitutionContext, options)
 	} else if isDockerComposeConfig(parsedConfig.Config) {
