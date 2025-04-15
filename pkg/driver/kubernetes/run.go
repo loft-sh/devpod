@@ -329,10 +329,12 @@ func getContainers(
 	strictSecurity string,
 	daemonConfigSecretName string,
 ) []corev1.Container {
-	volumeMounts = append(volumeMounts, corev1.VolumeMount{
-		Name:      "devpod-daemon-config",
-		MountPath: "/var/run/secrets/devpod",
-	})
+	if daemonConfigSecretName != "" {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "devpod-daemon-config",
+			MountPath: "/var/run/secrets/devpod",
+		})
+	}
 	devPodContainer := corev1.Container{
 		Name:         DevContainerName,
 		Image:        imageName,

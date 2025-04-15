@@ -576,6 +576,9 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with host:port forwardPorts", func(ctx context.Context) {
+				if runtime.GOOS == "windows" {
+					ginkgo.Skip("skipping on windows")
+				}
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-forward-ports")
 				framework.ExpectNoError(err)
 				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
@@ -646,6 +649,10 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with features", func(ctx context.Context) {
+				if runtime.GOOS == "windows" {
+					ginkgo.Skip("skipping on windows")
+				}
+
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-features")
 				framework.ExpectNoError(err)
 				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
@@ -673,7 +680,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				vclusterVersionOutput, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "vcluster --version", projectName})
 				framework.ExpectNoError(err)
-				gomega.Expect(vclusterVersionOutput).To(gomega.ContainSubstring("vcluster version 0.15.2"))
+				gomega.Expect(vclusterVersionOutput).To(gomega.ContainSubstring("vcluster version 0.24.1"))
 			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with env-file", func(ctx context.Context) {

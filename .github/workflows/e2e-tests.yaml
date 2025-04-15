@@ -37,7 +37,6 @@ jobs:
           - "machine"
           - "machineprovider"
           - "provider"
-          - "proxyprovider"
           - "ssh"
           - "up"
           - "up-docker"

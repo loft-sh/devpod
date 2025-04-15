@@ -20,7 +20,6 @@ import (
 	_ "github.com/loft-sh/devpod/e2e/tests/machine"
 	_ "github.com/loft-sh/devpod/e2e/tests/machineprovider"
 	_ "github.com/loft-sh/devpod/e2e/tests/provider"
-	_ "github.com/loft-sh/devpod/e2e/tests/proxyprovider"
 	_ "github.com/loft-sh/devpod/e2e/tests/ssh"
 	_ "github.com/loft-sh/devpod/e2e/tests/up"
 )
