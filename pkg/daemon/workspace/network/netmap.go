@@ -31,21 +31,19 @@ func NewNetmapWatcherService(rootDir string, lc *tailscale.LocalClient, log log.
 
 // Start begins watching the netmap.
 func (s *NetmapWatcherService) Start(ctx context.Context) {
-	go func() {
-		lastUpdate := time.Now()
-		if err := ts.WatchNetmap(ctx, s.lc, func(netMap *netmap.NetworkMap) {
-			if time.Since(lastUpdate) < netMapCooldown {
-				return
-			}
-			lastUpdate = time.Now()
-			nm, err := json.Marshal(netMap)
-			if err != nil {
-				s.log.Errorf("NetmapWatcherService: failed to marshal netmap: %v", err)
-			} else {
-				_ = os.WriteFile(filepath.Join(s.rootDir, "netmap.json"), nm, 0644)
-			}
-		}); err != nil {
-			s.log.Errorf("NetmapWatcherService: failed to watch netmap: %v", err)
+	lastUpdate := time.Now()
+	if err := ts.WatchNetmap(ctx, s.lc, func(netMap *netmap.NetworkMap) {
+		if time.Since(lastUpdate) < netMapCooldown {
+			return
 		}
-	}()
+		lastUpdate = time.Now()
+		nm, err := json.Marshal(netMap)
+		if err != nil {
+			s.log.Errorf("NetmapWatcherService: failed to marshal netmap: %v", err)
+		} else {
+			_ = os.WriteFile(filepath.Join(s.rootDir, "netmap.json"), nm, 0644)
+		}
+	}); err != nil {
+		s.log.Errorf("NetmapWatcherService: failed to watch netmap: %v", err)
+	}
 }

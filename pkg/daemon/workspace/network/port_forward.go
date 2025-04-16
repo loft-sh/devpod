@@ -58,8 +58,8 @@ func (s *HTTPPortForwardService) Start(ctx context.Context) {
 }
 
 func (s *HTTPPortForwardService) portForwardHandler(w http.ResponseWriter, r *http.Request) {
-	s.tracker.Add()
-	defer s.tracker.Remove()
+	s.tracker.Add("PortForward")
+	defer s.tracker.Remove("PortForward")
 	s.log.Debugf("HTTPPortForwardService: received request")
 
 	targetPort := r.Header.Get("X-Loft-Forward-Port")

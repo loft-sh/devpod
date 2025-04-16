@@ -59,8 +59,8 @@ func (s *SSHService) acceptLoop(ctx context.Context) {
 }
 
 func (s *SSHService) handleConnection(conn net.Conn) {
-	s.tracker.Add()
-	defer s.tracker.Remove()
+	s.tracker.Add("SSHService")
+	defer s.tracker.Remove("SSHService")
 	defer conn.Close()
 
 	localAddr := fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultUserPort)
@@ -71,10 +71,23 @@ func (s *SSHService) handleConnection(conn net.Conn) {
 	}
 	defer backendConn.Close()
 
+	// We need to wait for copying to finish before the function returns and Remove is called.
+	errChan := make(chan error, 2)
+
 	go func() {
-		_, _ = io.Copy(backendConn, conn)
+		_, err := io.Copy(backendConn, conn)
+		errChan <- err
 	}()
-	_, _ = io.Copy(conn, backendConn)
+
+	go func() {
+		_, err := io.Copy(conn, backendConn)
+		errChan <- err
+	}()
+
+	// Wait for one side of the connection to close or error
+	<-errChan
+	// Optionally wait for the second one too, or just proceed to cleanup
+	// <-errChan
 }
 
 // Stop stops the SSH server by closing its listener.

@@ -29,7 +29,6 @@ func NewHttpProxyHandler(tsSrv *tsnet.Server, logger log.Logger) *HttpProxyHandl
 	}
 }
 
-// tsDialer is a helper within HttpProxyHandler for dialing over tsnet.
 func (h *HttpProxyHandler) tsDialer(ctx context.Context, addr string) (net.Conn, error) {
 	h.log.Debugf("HttpProxyHandler: Dialing target %s via tsnet", addr)
 	conn, err := h.tsServer.Dial(ctx, "tcp", addr)

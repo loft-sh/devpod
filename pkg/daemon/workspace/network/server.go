@@ -46,9 +46,11 @@ type WorkspaceServer struct {
 // NewWorkspaceServer creates a new WorkspaceServer.
 func NewWorkspaceServer(config *WorkspaceServerConfig, logger log.Logger) *WorkspaceServer {
 	return &WorkspaceServer{
-		config:      config,
-		log:         logger,
-		connTracker: &ConnTracker{},
+		config: config,
+		log:    logger,
+		connTracker: &ConnTracker{
+			logger: logger,
+		},
 	}
 }
 
@@ -72,7 +74,6 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 	}
 	s.sshSvc.Start(ctx)
 
-	// Create and start the HTTP port forward service.
 	s.httpProxySvc, err = NewHTTPPortForwardService(s.network, s.connTracker, s.log)
 	if err != nil {
 		return err
@@ -92,7 +93,7 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	s.netProxySvc.Start(ctx)
+	go s.netProxySvc.Start(ctx)
 
 	// Start the heartbeat service.
 	s.heartbeatSvc = NewHeartbeatService(s.config, s.network, lc, projectName, workspaceName, s.connTracker, s.log)
@@ -100,7 +101,7 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 
 	// Start netmap watcher.
 	s.netmapWatcher = NewNetmapWatcherService(s.config.RootDir, lc, s.log)
-	s.netmapWatcher.Start(ctx)
+	go s.netmapWatcher.Start(ctx)
 
 	// Wait until the context is canceled.
 	<-ctx.Done()
