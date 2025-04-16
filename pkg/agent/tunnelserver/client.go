@@ -43,9 +43,8 @@ func NewTunnelClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool, 
 // NewHTTPTunnelClient creates a new gRPC client that connects via the network proxy.
 func NewHTTPTunnelClient(targetHost string, targetPort string, log log.Logger) (tunnel.TunnelClient, error) {
 	resolver.SetDefaultScheme("passthrough")
-	log.Infof("Starting tunnel client targeting %s:%s via proxy", targetHost, targetPort)
+	log.Infof("Starting tunnel client targeting %s:%s", targetHost, targetPort)
 
-	// Create a unary interceptor to attach the target metadata.
 	unaryInterceptor := func(
 		ctx context.Context,
 		method string,
@@ -55,11 +54,11 @@ func NewHTTPTunnelClient(targetHost string, targetPort string, log log.Logger) (
 		opts ...grpc.CallOption,
 	) error {
 		md := metadata.New(map[string]string{
-			"x-target-host": targetHost,
-			"x-proxy-port":  fmt.Sprintf("%d", locald.LocalCredentialsServerPort),
-			"x-target-port": targetPort,
+			network.HeaderTargetHost: targetHost,
+			network.HeaderTargetPort: targetPort,
+			network.HeaderProxyPort:  fmt.Sprintf("%d", locald.DefaultGRPCProxyPort),
 		})
-		// Create a new outgoing context with the metadata attached.
+
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		log.Debugf("Unary interceptor adding metadata: host=%s, port=%s", targetHost, targetPort)
 		return invoker(ctx, method, req, reply, cc, opts...)
@@ -74,22 +73,23 @@ func NewHTTPTunnelClient(targetHost string, targetPort string, log log.Logger) (
 		opts ...grpc.CallOption,
 	) (grpc.ClientStream, error) {
 		md := metadata.New(map[string]string{
-			"x-target-host": targetHost,
-			"x-target-port": targetPort,
+			network.HeaderTargetHost: targetHost,
+			network.HeaderTargetPort: targetPort,
+			network.HeaderProxyPort:  fmt.Sprintf("%d", locald.DefaultGRPCProxyPort),
 		})
-		// Create a new outgoing context with the metadata attached.
+
 		ctx = metadata.NewOutgoingContext(ctx, md)
 		log.Debugf("Stream interceptor adding metadata: host=%s, port=%s", targetHost, targetPort)
 		return streamer(ctx, desc, cc, method, opts...)
 	}
 
-	target := "passthrough:///proxy-socket-target"
+	target := "passthrough:///proxy-socket-target" // dummy target, our dialer is responsible for using socket
 
 	conn, err := grpc.NewClient(target,
-		grpc.WithTransportCredentials(insecure.NewCredentials()), // Connect to proxy socket without TLS
-		grpc.WithContextDialer(network.GetContextDialer()),       // Use our custom dialer
-		grpc.WithUnaryInterceptor(unaryInterceptor),              // Add metadata for unary calls
-		grpc.WithStreamInterceptor(streamInterceptor),            // Add metadata for streaming calls
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(network.GetContextDialer()),
+		grpc.WithUnaryInterceptor(unaryInterceptor),
+		grpc.WithStreamInterceptor(streamInterceptor),
 	)
 	if err != nil {
 		log.Errorf("Failed to create gRPC client connection via proxy: %v", err)

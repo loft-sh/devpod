@@ -50,9 +50,9 @@ func (d *GrpcDirector) DirectorFunc(ctx context.Context, fullMethodName string) 
 	}
 	mdCopy := md.Copy()
 
-	targetHosts := mdCopy.Get("x-target-host")
-	targetPorts := mdCopy.Get("x-target-port")
-	proxyPorts := mdCopy.Get("x-proxy-port")
+	targetHosts := mdCopy.Get(HeaderTargetHost)
+	targetPorts := mdCopy.Get(HeaderTargetPort)
+	proxyPorts := mdCopy.Get(HeaderProxyPort)
 
 	if len(targetHosts) == 0 || len(targetPorts) == 0 || len(proxyPorts) == 0 {
 		d.log.Errorf("NetworkProxyService: gRPC: Director missing x-target-host, x-proxy-port or x-target-port metadata for call %q", fullMethodName)

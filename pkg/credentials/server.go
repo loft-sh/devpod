@@ -8,14 +8,11 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
-	devpodlog "github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -32,37 +29,33 @@ func RunCredentialsServer(
 	clientHost string,
 	logger log.Logger,
 ) error {
-	logPath := filepath.Join("/tmp", CredentialsServerLogFile)
-	fileLogger := log.NewFileLogger(logPath, logrus.DebugLevel)
-	combinedLogger := devpodlog.NewCombinedLogger(logrus.DebugLevel, logger, fileLogger)
-
 	var handler http.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		combinedLogger.Debugf("Incoming client connection at %s", request.URL.Path)
+		logger.Debugf("Incoming client connection at %s", request.URL.Path)
 		if request.URL.Path == "/git-credentials" {
-			err := handleGitCredentialsRequest(ctx, writer, request, client, clientHost, combinedLogger)
+			err := handleGitCredentialsRequest(ctx, writer, request, client, clientHost, logger)
 			if err != nil {
 				http.Error(writer, err.Error(), http.StatusInternalServerError)
 				return
 			}
 		} else if request.URL.Path == "/docker-credentials" {
-			err := handleDockerCredentialsRequest(ctx, writer, request, client, combinedLogger)
+			err := handleDockerCredentialsRequest(ctx, writer, request, client, logger)
 			if err != nil {
 				http.Error(writer, err.Error(), http.StatusInternalServerError)
 				return
 			}
 		} else if request.URL.Path == "/git-ssh-signature" {
-			err := handleGitSSHSignatureRequest(ctx, writer, request, client, combinedLogger)
+			err := handleGitSSHSignatureRequest(ctx, writer, request, client, logger)
 			if err != nil {
 				http.Error(writer, err.Error(), http.StatusInternalServerError)
 				return
 			}
 		} else if request.URL.Path == "/loft-platform-credentials" {
-			err := handleLoftPlatformCredentialsRequest(ctx, writer, request, client, combinedLogger)
+			err := handleLoftPlatformCredentialsRequest(ctx, writer, request, client, logger)
 			if err != nil {
 				http.Error(writer, err.Error(), http.StatusInternalServerError)
 			}
 		} else if request.URL.Path == "/gpg-public-keys" {
-			err := handleGPGPublicKeysRequest(ctx, writer, request, client, combinedLogger)
+			err := handleGPGPublicKeysRequest(ctx, writer, request, client, logger)
 			if err != nil {
 				http.Error(writer, err.Error(), http.StatusInternalServerError)
 			}
@@ -74,7 +67,7 @@ func RunCredentialsServer(
 
 	errChan := make(chan error, 1)
 	go func() {
-		combinedLogger.Debugf("Credentials server started on port %d...", port)
+		logger.Debugf("Credentials server started on port %d...", port)
 
 		// always returns error. ErrServerClosed on graceful close
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {

@@ -17,6 +17,12 @@ import (
 	"tailscale.com/tsnet"
 )
 
+const (
+	HeaderTargetHost string = "x-target-host"
+	HeaderTargetPort string = "x-target-port"
+	HeaderProxyPort  string = "x-proxy-port"
+)
+
 // NetworkProxyService proxies gRPC and HTTP requests over DevPod network.
 // It coordinates the listener, cmux, and underlying servers.
 type NetworkProxyService struct {

@@ -43,8 +43,8 @@ func (h *HttpProxyHandler) tsDialer(ctx context.Context, addr string) (net.Conn,
 
 // ServeHTTP implements the http.Handler interface.
 func (h *HttpProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	targetHostHeader := r.Header.Get("X-Target-Host")
-	proxyPortHeader := r.Header.Get("X-Proxy-Port")
+	targetHostHeader := r.Header.Get(HeaderTargetHost)
+	proxyPortHeader := r.Header.Get(HeaderProxyPort)
 
 	var targetAddr string
 

@@ -25,7 +25,7 @@ import (
 
 const (
 	ExitCodeIO     int    = 64
-	DefaultLogFile string = "/tmp/devpod-credentials-server.log"
+	DefaultLogFile string = "/var/devpod/credentials-server.log"
 )
 
 // CredentialsServerCmd holds the cmd flags
@@ -78,11 +78,12 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, port int) error {
 	var tunnelClient tunnel.TunnelClient
 	var err error
 	fileLogger := log.NewFileLogger(DefaultLogFile, logrus.DebugLevel)
+
 	// create a grpc client
 	// if we have client address, lets use the http client
 	if cmd.Client != "" {
-		// address := ts.EnsureURL(cmd.Client, locald.LocalCredentialsServerPort)
-		tunnelClient, err = tunnelserver.NewHTTPTunnelClient(cmd.Client, fmt.Sprintf("%d", cmd.Port), fileLogger)
+		tunnelClient, err = tunnelserver.NewHTTPTunnelClient(
+			cmd.Client, fmt.Sprintf("%d", cmd.Port), fileLogger)
 		if err != nil {
 			return fmt.Errorf("error creating tunnel client: %w", err)
 		}
@@ -129,7 +130,7 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, port int) error {
 	}
 
 	// configure git user
-	err = configureGitUserLocally(ctx, cmd.User, tunnelClient) // FIXME: still uses tunnel client for git creds
+	err = configureGitUserLocally(ctx, cmd.User, tunnelClient)
 	if err != nil {
 		log.Debugf("Error configuring git user: %v", err)
 		return err
