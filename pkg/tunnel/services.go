@@ -88,15 +88,20 @@ func RunServices(
 			forwarder = newForwarder(containerClient, append(forwardedPorts, fmt.Sprintf("%d", openvscode.DefaultVSCodePort)), log)
 		}
 
+		// Create channels for the port and errors.
+		portChan := make(chan int, 1)
 		errChan := make(chan error, 1)
+
 		go func() {
 			defer cancel()
 			defer stdinWriter.Close()
-			listener, err := tunnelserver.GetListener(client, stdoutReader, stdinWriter, false, log)
+			listener, port, err := tunnelserver.GetListener(client, stdoutReader, stdinWriter, false, log)
 			if err != nil {
 				errChan <- errors.Wrap(err, "create tunnel server listener")
+				return
 			}
-			log.Infof("DEBUG GRPC - GOT LISTENER FOR LOCAL SERVER - %v\n", listener)
+			// Send the generated port back.
+			portChan <- port
 			defer listener.Close()
 
 			// Start local credentials server on clients machine and forward credentials to container
@@ -116,7 +121,16 @@ func RunServices(
 			close(errChan)
 		}()
 
-		// run credentials server
+		log.Infof("Waiting for credentials server port to be assigned...")
+		var port int
+		select {
+		case port = <-portChan:
+			log.Infof("Credentials server running on port %d\n", port)
+		case err = <-errChan:
+			return err
+		}
+
+		// Run credentials server process.
 		writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
 		defer writer.Close()
 
@@ -129,6 +143,11 @@ func RunServices(
 		if configureGitCredentials {
 			command += " --configure-git-helper"
 		}
+
+		if port != 0 {
+			command += fmt.Sprintf(" --port %d", port)
+		}
+
 		if configureGitSSHSignatureHelper {
 			format, userSigningKey, err := gitsshsigning.ExtractGitConfiguration()
 			if err == nil && format == gitsshsigning.GPGFormatSSH && userSigningKey != "" {

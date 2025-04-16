@@ -33,18 +33,23 @@ import (
 )
 
 // GetListener returns correct listener for services server - either stdio or tcp
-func GetListener(client string, reader io.Reader, writer io.WriteCloser, exitOnClose bool, log log.Logger) (net.Listener, error) {
+func GetListener(client string, reader io.Reader, writer io.WriteCloser, exitOnClose bool, log log.Logger) (net.Listener, int, error) {
 	if client == "" {
-		log.Info("GetListener - returning stdio listener")
-		return stdio.NewStdioListener(reader, writer, exitOnClose), nil
+		log.Debug("GetListener - returning stdio listener")
+		return stdio.NewStdioListener(reader, writer, exitOnClose), 0, nil
 	}
-	log.Info("GetListener - returning tcp listener")
-	listener, err := net.Listen("tcp", ":4795") // FIXME
+	log.Debug("GetListener - returning tcp listener")
+	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return listener, nil
+	// Extract the actual TCP port the OS has bound to.
+	tcpAddr, ok := listener.Addr().(*net.TCPAddr)
+	if !ok {
+		return nil, 0, fmt.Errorf("listener.Addr() is not a *net.TCPAddr")
+	}
+	return listener, tcpAddr.Port, nil
 }
 
 func RunServicesServer(ctx context.Context, lis net.Listener, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, workspace *provider2.Workspace, log log.Logger, options ...Option) error {

@@ -64,9 +64,7 @@ func (s *LocalCredentialsServerProxy) Listen(ctx context.Context) error {
 			s.log.Error("LocalCredentialsServerProxy: Director missing x-target-port metadata")
 			return nil, nil, status.Errorf(codes.InvalidArgument, "missing x-target-port metadata")
 		}
-		// targetPort := targetPorts[0]
-		targetPort := "4795" // FIXME
-
+		targetPort := targetPorts[0]
 		targetAddr := net.JoinHostPort(DefaultTargetHost, targetPort)
 
 		s.log.Infof("[LocalCredentialsServerProxy] [gRPC] Proxying call %q to target %s", fullMethodName, targetAddr)

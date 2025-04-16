@@ -13,7 +13,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/credentials"
-	locald "github.com/loft-sh/devpod/pkg/daemon/local"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/gitsshsigning"
@@ -24,7 +23,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const ExitCodeIO int = 64
+const (
+	ExitCodeIO     int    = 64
+	DefaultLogFile string = "/tmp/devpod-credentials-server.log"
+)
 
 // CredentialsServerCmd holds the cmd flags
 type CredentialsServerCmd struct {
@@ -32,6 +34,7 @@ type CredentialsServerCmd struct {
 
 	User   string
 	Client string
+	Port   int
 
 	ConfigureGitHelper    bool
 	ConfigureDockerHelper bool
@@ -65,6 +68,7 @@ func NewCredentialsServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	credentialsServerCmd.Flags().StringVar(&cmd.User, "user", "", "The user to use")
 	_ = credentialsServerCmd.MarkFlagRequired("user")
 	credentialsServerCmd.Flags().StringVar(&cmd.Client, "client", "", "client host")
+	credentialsServerCmd.Flags().IntVar(&cmd.Port, "port", 0, "port of credentials server running locally on client machine to connect to")
 
 	return credentialsServerCmd
 }
@@ -73,12 +77,12 @@ func NewCredentialsServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 func (cmd *CredentialsServerCmd) Run(ctx context.Context, port int) error {
 	var tunnelClient tunnel.TunnelClient
 	var err error
-	fileLogger := log.NewFileLogger("/tmp/credentials_server_cmd.log", logrus.DebugLevel)
+	fileLogger := log.NewFileLogger(DefaultLogFile, logrus.DebugLevel)
 	// create a grpc client
 	// if we have client address, lets use the http client
 	if cmd.Client != "" {
 		// address := ts.EnsureURL(cmd.Client, locald.LocalCredentialsServerPort)
-		tunnelClient, err = tunnelserver.NewHTTPTunnelClient(cmd.Client, fmt.Sprintf("%d", locald.LocalCredentialsServerPort), fileLogger)
+		tunnelClient, err = tunnelserver.NewHTTPTunnelClient(cmd.Client, fmt.Sprintf("%d", cmd.Port), fileLogger)
 		if err != nil {
 			return fmt.Errorf("error creating tunnel client: %w", err)
 		}

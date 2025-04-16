@@ -63,16 +63,17 @@ func (s *NetworkProxyService) Start(ctx context.Context) error {
 
 		targetHosts := mdCopy.Get("x-target-host")
 		targetPorts := mdCopy.Get("x-target-port")
-		if len(targetHosts) == 0 || len(targetPorts) == 0 {
-			s.log.Errorf("[NetworkProxyService] [gRPC] Director missing x-target-host or x-target-port metadata for call %q", fullMethodName)
-			return nil, nil, status.Errorf(codes.InvalidArgument, "missing x-target-host or x-target-port metadata")
+		proxyPorts := mdCopy.Get("x-proxy-port")
+		if len(targetHosts) == 0 || len(targetPorts) == 0 || len(proxyPorts) == 0 {
+			s.log.Errorf("[NetworkProxyService] [gRPC] Director missing x-target-host, x-proxy-port or x-target-port metadata for call %q", fullMethodName)
+			return nil, nil, status.Errorf(codes.InvalidArgument, "missing x-target-host, x-proxy-port or x-target-port metadata")
 		}
 
-		port, err := strconv.Atoi(targetPorts[0])
+		proxyPort, err := strconv.Atoi(proxyPorts[0])
 		if err != nil {
 			return nil, nil, err
 		}
-		targetAddr := ts.EnsureURL(targetHosts[0], port)
+		targetAddr := ts.EnsureURL(targetHosts[0], proxyPort)
 
 		s.log.Infof("[NetworkProxyService] [gRPC] Proxying call %q to target %s", fullMethodName, targetAddr)
 

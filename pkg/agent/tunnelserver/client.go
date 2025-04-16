@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
+	locald "github.com/loft-sh/devpod/pkg/daemon/local"
 	"github.com/loft-sh/devpod/pkg/daemon/workspace/network"
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
@@ -55,6 +56,7 @@ func NewHTTPTunnelClient(targetHost string, targetPort string, log log.Logger) (
 	) error {
 		md := metadata.New(map[string]string{
 			"x-target-host": targetHost,
+			"x-proxy-port":  fmt.Sprintf("%d", locald.LocalCredentialsServerPort),
 			"x-target-port": targetPort,
 		})
 		// Create a new outgoing context with the metadata attached.
