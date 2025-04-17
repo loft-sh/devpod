@@ -19,16 +19,22 @@ import (
 	"github.com/loft-sh/devpod/pkg/netstat"
 	portpkg "github.com/loft-sh/devpod/pkg/port"
 	"github.com/loft-sh/log"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-const ExitCodeIO int = 64
+const (
+	ExitCodeIO     int    = 64
+	DefaultLogFile string = "/var/devpod/credentials-server.log"
+)
 
 // CredentialsServerCmd holds the cmd flags
 type CredentialsServerCmd struct {
 	*flags.GlobalFlags
 
-	User string
+	User   string
+	Client string
+	Port   int
 
 	ConfigureGitHelper    bool
 	ConfigureDockerHelper bool
@@ -61,16 +67,32 @@ func NewCredentialsServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	credentialsServerCmd.Flags().StringVar(&cmd.GitUserSigningKey, "git-user-signing-key", "", "")
 	credentialsServerCmd.Flags().StringVar(&cmd.User, "user", "", "The user to use")
 	_ = credentialsServerCmd.MarkFlagRequired("user")
+	credentialsServerCmd.Flags().StringVar(&cmd.Client, "client", "", "client host")
+	credentialsServerCmd.Flags().IntVar(&cmd.Port, "port", 0, "port of credentials server running locally on client machine to connect to")
 
 	return credentialsServerCmd
 }
 
 // Run runs the command logic
 func (cmd *CredentialsServerCmd) Run(ctx context.Context, port int) error {
+	var tunnelClient tunnel.TunnelClient
+	var err error
+	fileLogger := log.NewFileLogger(DefaultLogFile, logrus.DebugLevel)
+
 	// create a grpc client
-	tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true, ExitCodeIO)
-	if err != nil {
-		return fmt.Errorf("error creating tunnel client: %w", err)
+	// if we have client address, lets use the http client
+	if cmd.Client != "" {
+		tunnelClient, err = tunnelserver.NewHTTPTunnelClient(
+			cmd.Client, fmt.Sprintf("%d", cmd.Port), fileLogger)
+		if err != nil {
+			return fmt.Errorf("error creating tunnel client: %w", err)
+		}
+	} else {
+		// otherwise we fallback to stdio client
+		tunnelClient, err = tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true, ExitCodeIO)
+		if err != nil {
+			return fmt.Errorf("error creating tunnel client: %w", err)
+		}
 	}
 
 	// this message serves as a ping to the client
@@ -148,7 +170,7 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, port int) error {
 		}(cmd.User)
 	}
 
-	return credentials.RunCredentialsServer(ctx, port, tunnelClient, log)
+	return credentials.RunCredentialsServer(ctx, port, tunnelClient, cmd.Client, log)
 }
 
 func configureGitUserLocally(ctx context.Context, userName string, client tunnel.TunnelClient) error {

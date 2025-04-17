@@ -15,7 +15,7 @@ import (
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	clientpkg "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
-	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
+	daemon "github.com/loft-sh/devpod/pkg/daemon/local"
 	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/platform"
 	platformclient "github.com/loft-sh/devpod/pkg/platform/client"
@@ -271,6 +271,17 @@ func (c *client) Ping(ctx context.Context, writer io.Writer) error {
 	}
 
 	return nil
+}
+
+func (c *client) GetClientAddress(ctx context.Context) (string, error) {
+	status, err := c.tsClient.Status(ctx)
+	if err != nil {
+		return "", err
+	}
+	if status.Self == nil {
+		return "", fmt.Errorf("no self peer found")
+	}
+	return status.Self.DNSName, nil
 }
 
 func (c *client) initPlatformClient(ctx context.Context) (platformclient.Client, error) {

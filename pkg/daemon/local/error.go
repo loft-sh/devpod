@@ -1,4 +1,4 @@
-package daemon
+package local
 
 import (
 	"errors"

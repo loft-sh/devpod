@@ -17,7 +17,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/credentials"
-	agentdaemon "github.com/loft-sh/devpod/pkg/daemon/agent"
+	workspaced "github.com/loft-sh/devpod/pkg/daemon/workspace"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/crane"
@@ -396,7 +396,7 @@ func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) 
 	}
 
 	log.Debugf("Installing DevPod daemon into server...")
-	err := agentdaemon.InstallDaemon(workspaceInfo.Agent.DataPath, workspaceInfo.CLIOptions.DaemonInterval, log)
+	err := workspaced.InstallDaemon(workspaceInfo.Agent.DataPath, workspaceInfo.CLIOptions.DaemonInterval, log)
 	if err != nil {
 		return errors.Wrap(err, "install daemon")
 	}
