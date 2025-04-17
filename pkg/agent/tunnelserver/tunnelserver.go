@@ -54,9 +54,10 @@ func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, a
 	return tunnelServ.RunWithResult(ctx, reader, writer)
 }
 
-func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, log log.Logger, options ...Option) (*config.Result, error) {
+func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, workspace *provider2.Workspace, log log.Logger, options ...Option) (*config.Result, error) {
 	opts := append(options, []Option{
 		WithMounts(mounts),
+		WithWorkspace(workspace),
 		WithAllowGitCredentials(allowGitCredentials),
 		WithAllowDockerCredentials(allowDockerCredentials),
 		WithAllowKubeConfig(true),
