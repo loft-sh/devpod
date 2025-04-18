@@ -72,6 +72,9 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string
 
 				return true
 			},
+			X11ForwardingCallback: func(ctx ssh.Context, x11 ssh.X11) bool {
+				return true
+			},
 			ChannelHandlers: map[string]ssh.ChannelHandler{
 				"direct-tcpip":                   ssh.DirectTCPIPHandler,
 				"direct-streamlocal@openssh.com": ssh.DirectStreamLocalHandler,
@@ -118,6 +121,7 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string
 func (s *server) handler(sess ssh.Session) {
 	var err error
 	ptyReq, winCh, isPty := sess.Pty()
+	x11Req, isX11 := sess.X11()
 	cmd := s.getCommand(sess, isPty)
 
 	if ssh.AgentRequested(sess) {
@@ -132,6 +136,20 @@ func (s *server) handler(sess ssh.Session) {
 		go ssh.ForwardAgentConnections(l, sess)
 
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "SSH_AUTH_SOCK", l.Addr().String()))
+	}
+
+	if isX11 {
+		l, xauth, err := ssh.NewX11Forwarder(x11Req)
+		if err != nil {
+			s.exitWithError(sess, perrors.Wrap(err, "start X11 forwarder"))
+			return
+		}
+
+		defer l.Close()
+		defer os.Remove(xauth.Name())
+		go ssh.ForwardX11Connections(l, xauth, sess)
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s:%d.0", "DISPLAY", ssh.X11DisplayHost, l.Addr().(*net.TCPAddr).Port - ssh.X11DisplayBasePort))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "XAUTHORITY", xauth.Name()))
 	}
 
 	// start shell session
