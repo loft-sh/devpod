@@ -121,11 +121,13 @@ func RunServices(
 			close(errChan)
 		}()
 
-		log.Infof("Waiting for credentials server port to be assigned...")
+		log.Debugf("Waiting for credentials server port to be assigned...")
 		var port int
 		select {
 		case port = <-portChan:
-			log.Infof("Credentials server running on port %d\n", port)
+			if port != 0 {
+				log.Infof("Credentials server running on port %d\n", port)
+			}
 		case err = <-errChan:
 			return err
 		}
