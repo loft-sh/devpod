@@ -41,11 +41,25 @@ func ParseWorkspaceHostname(hostname string) (name string, project string, err e
 	return name, project, nil
 }
 
+// GetURL builds network url from host and port
 func GetURL(host string, port int) string {
 	if port == 0 {
 		return fmt.Sprintf("%s.%s", host, LoftTSNetDomain)
 	}
 	return fmt.Sprintf("%s.%s:%d", host, LoftTSNetDomain, port)
+}
+
+// EnsureURL ensures that the given hostOrUrl is a valid URL.
+func EnsureURL(hostOrUrl string, port int) string {
+	// ts peer name from netmap might end with a dot, so we need to trim it
+	hostOrUrl = strings.TrimSuffix(hostOrUrl, ".")
+	if strings.HasSuffix(hostOrUrl, LoftTSNetDomain) {
+		if port == 0 {
+			return hostOrUrl
+		}
+		return fmt.Sprintf("%s:%d", hostOrUrl, port)
+	}
+	return GetURL(hostOrUrl, port)
 }
 
 // WaitHostReachable polls until the given host is reachable via ts.

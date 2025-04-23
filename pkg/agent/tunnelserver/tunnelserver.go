@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,7 +32,27 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func RunServicesServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, workspace *provider2.Workspace, log log.Logger, options ...Option) error {
+// GetListener returns correct listener for services server - either stdio or tcp
+func GetListener(client string, reader io.Reader, writer io.WriteCloser, exitOnClose bool, log log.Logger) (net.Listener, int, error) {
+	if client == "" {
+		log.Debug("GetListener - returning stdio listener")
+		return stdio.NewStdioListener(reader, writer, exitOnClose), 0, nil
+	}
+	log.Debug("GetListener - returning tcp listener")
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Extract the actual TCP port the OS has bound to.
+	tcpAddr, ok := listener.Addr().(*net.TCPAddr)
+	if !ok {
+		return nil, 0, fmt.Errorf("listener.Addr() is not a *net.TCPAddr")
+	}
+	return listener, tcpAddr.Port, nil
+}
+
+func RunServicesServer(ctx context.Context, lis net.Listener, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, workspace *provider2.Workspace, log log.Logger, options ...Option) error {
 	opts := append(options, []Option{
 		WithForwarder(forwarder),
 		WithAllowGitCredentials(allowGitCredentials),
@@ -40,10 +61,10 @@ func RunServicesServer(ctx context.Context, reader io.Reader, writer io.WriteClo
 	}...)
 	tunnelServ := New(log, opts...)
 
-	return tunnelServ.Run(ctx, reader, writer)
+	return tunnelServ.Run(ctx, lis)
 }
 
-func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, log log.Logger, options ...Option) (*config.Result, error) {
+func RunUpServer(ctx context.Context, lis net.Listener, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, log log.Logger, options ...Option) (*config.Result, error) {
 	opts := append(options, []Option{
 		WithWorkspace(workspace),
 		WithAllowGitCredentials(allowGitCredentials),
@@ -51,10 +72,10 @@ func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, a
 	}...)
 	tunnelServ := New(log, opts...)
 
-	return tunnelServ.RunWithResult(ctx, reader, writer)
+	return tunnelServ.RunWithResult(ctx, lis)
 }
 
-func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, log log.Logger, options ...Option) (*config.Result, error) {
+func RunSetupServer(ctx context.Context, lis net.Listener, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, log log.Logger, options ...Option) (*config.Result, error) {
 	opts := append(options, []Option{
 		WithMounts(mounts),
 		WithAllowGitCredentials(allowGitCredentials),
@@ -64,7 +85,7 @@ func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser
 	tunnelServ := New(log, opts...)
 	tunnelServ.allowPlatformOptions = true
 
-	return tunnelServ.RunWithResult(ctx, reader, writer)
+	return tunnelServ.RunWithResult(ctx, lis)
 }
 
 func New(log log.Logger, options ...Option) *tunnelServer {
@@ -96,8 +117,7 @@ type tunnelServer struct {
 	platformOptions *devpod.PlatformOptions
 }
 
-func (t *tunnelServer) RunWithResult(ctx context.Context, reader io.Reader, writer io.WriteCloser) (*config.Result, error) {
-	lis := stdio.NewStdioListener(reader, writer, false)
+func (t *tunnelServer) RunWithResult(ctx context.Context, lis net.Listener) (*config.Result, error) {
 	s := grpc.NewServer()
 	tunnel.RegisterTunnelServer(s, t)
 	reflection.Register(s)
@@ -114,8 +134,8 @@ func (t *tunnelServer) RunWithResult(ctx context.Context, reader io.Reader, writ
 	}
 }
 
-func (t *tunnelServer) Run(ctx context.Context, reader io.Reader, writer io.WriteCloser) error {
-	_, err := t.RunWithResult(ctx, reader, writer)
+func (t *tunnelServer) Run(ctx context.Context, lis net.Listener) error {
+	_, err := t.RunWithResult(ctx, lis)
 	return err
 }
 

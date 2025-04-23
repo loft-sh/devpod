@@ -35,5 +35,6 @@ func NewHelperCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	helperCmd.AddCommand(NewFleetServerCmd(globalFlags))
 	helperCmd.AddCommand(NewDockerCredentialsHelperCmd(globalFlags))
 	helperCmd.AddCommand(NewGetImageCmd(globalFlags))
+	helperCmd.AddCommand(requestCmd)
 	return helperCmd
 }

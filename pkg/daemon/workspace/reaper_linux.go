@@ -1,7 +1,7 @@
 //go:build linux
 // +build linux
 
-package agent
+package workspace
 
 import reaper "github.com/ramr/go-reaper"
 

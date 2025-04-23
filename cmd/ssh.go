@@ -17,7 +17,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
-	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
+	daemon "github.com/loft-sh/devpod/pkg/daemon/local"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
 	"github.com/loft-sh/devpod/pkg/provider"
@@ -559,6 +559,7 @@ func (cmd *SSHCmd) startServices(
 			configureDockerCredentials,
 			configureGitCredentials,
 			configureGitSSHSignatureHelper,
+			"",
 			log,
 		)
 		if err != nil {
@@ -670,6 +671,10 @@ func startServicesDaemon(ctx context.Context, devPodConfig *config.Config, clien
 	if err != nil {
 		return err
 	}
+	clientHost, err := client.GetClientAddress(ctx)
+	if err != nil {
+		return err
+	}
 
 	configureDockerCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
 	configureGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
@@ -698,6 +703,7 @@ func startServicesDaemon(ctx context.Context, devPodConfig *config.Config, clien
 			configureDockerCredentials,
 			configureGitCredentials,
 			configureGitSSHSignatureHelper,
+			clientHost,
 			log,
 		)
 	}

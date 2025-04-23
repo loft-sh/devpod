@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
+	daemon "github.com/loft-sh/devpod/pkg/daemon/local"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 
 	"github.com/loft-sh/devpod/cmd/pro/completion"
