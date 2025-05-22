@@ -1,0 +1,14 @@
+{
+  "name": "Test Feature with Environment Variables",
+  "id": "test-feature",
+  "version": "1.0.0",
+  "description": "A test feature that captures environment variables during installation and in its entrypoint",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "1.0.0",
+      "description": "Version of the test feature"
+    }
+  },
+  "entrypoint": "/usr/local/bin/test-feature-entrypoint.sh"
+}
