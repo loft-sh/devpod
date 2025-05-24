@@ -27,4 +27,5 @@ jobs:
           exempt-issue-labels: >-
             in-progress,
             assigned,
+            kind/bug,
             kind/enhancement
