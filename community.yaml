@@ -9,3 +9,4 @@ providers:
   - repository: https://github.com/minhio/devpod-provider-multipass
   - repository: https://github.com/akyriako/devpod-provider-opentelekomcloud
   - repository: https://github.com/stackitcloud/devpod-provider-stackit
+  - repository: https://github.com/NaNomicon/dokploy-devpod-provider
