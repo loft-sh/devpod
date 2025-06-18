@@ -245,6 +245,18 @@ func (s *WorkspaceServer) startListeners(ctx context.Context, projectName, works
 		}
 	}()
 
+	// Setup HTTP handler for docker credentials.
+	go func() {
+		mux := http.NewServeMux()
+		transport := &http.Transport{DialContext: s.tsServer.Dial}
+		mux.HandleFunc("/docker-credentials", func(w http.ResponseWriter, r *http.Request) {
+			s.dockerCredentialsHandler(w, r, lc, transport, projectName, workspaceName)
+		})
+		if err := http.Serve(runnerProxyListener, mux); err != nil && err != http.ErrServerClosed {
+			s.log.Errorf("HTTP runner proxy server error: %v", err)
+		}
+	}()
+
 	// Setup HTTP handler for port forwarding.
 	go func() {
 		mux := http.NewServeMux()
@@ -283,8 +295,7 @@ func (s *WorkspaceServer) removeConnection() {
 	s.connectionCounter--
 }
 
-// httpPortForwardHandler is the HTTP reverse proxy handler for workspace.
-// It reconstructs the target URL using custom headers and forwards the request.
+// gitCredentialsHandler is the handler for git credentials requests for workspace.
 func (s *WorkspaceServer) gitCredentialsHandler(w http.ResponseWriter, r *http.Request, lc *tailscale.LocalClient, transport *http.Transport, projectName, workspaceName string) {
 	s.log.Infof("Received git credentials request from %s", r.RemoteAddr)
 
@@ -297,6 +308,37 @@ func (s *WorkspaceServer) gitCredentialsHandler(w http.ResponseWriter, r *http.R
 
 	// build the runner URL
 	runnerURL := fmt.Sprintf("http://%s.ts.loft/devpod/%s/%s/workspace-git-credentials", discoveredRunner, projectName, workspaceName)
+	parsedURL, err := url.Parse(runnerURL)
+	if err != nil {
+		http.Error(w, "failed to parse runner URL", http.StatusInternalServerError)
+		return
+	}
+
+	// Build the reverse proxy with a custom Director.
+	proxy := httputil.NewSingleHostReverseProxy(parsedURL)
+	proxy.Director = func(req *http.Request) {
+		dest := *parsedURL
+		req.URL = &dest
+		req.Host = dest.Host
+		req.Header.Set("Authorization", "Bearer "+s.config.AccessKey)
+	}
+	proxy.Transport = transport
+	proxy.ServeHTTP(w, r)
+}
+
+// dockerCredentialsHandler is the handler for docker credentials requests for workspace.
+func (s *WorkspaceServer) dockerCredentialsHandler(w http.ResponseWriter, r *http.Request, lc *tailscale.LocalClient, transport *http.Transport, projectName, workspaceName string) {
+	s.log.Infof("Received docker credentials request from %s", r.RemoteAddr)
+
+	// create a new http client with a custom transport
+	discoveredRunner, err := s.discoverRunner(r.Context(), lc)
+	if err != nil {
+		http.Error(w, "failed to discover runner", http.StatusInternalServerError)
+		return
+	}
+
+	// build the runner URL
+	runnerURL := fmt.Sprintf("http://%s.ts.loft/devpod/%s/%s/workspace-docker-credentials", discoveredRunner, projectName, workspaceName)
 	parsedURL, err := url.Parse(runnerURL)
 	if err != nil {
 		http.Error(w, "failed to parse runner URL", http.StatusInternalServerError)

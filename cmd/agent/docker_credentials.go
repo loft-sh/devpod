@@ -6,14 +6,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/loft-sh/devpod/cmd/agent/container"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
+	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 )
@@ -111,6 +115,17 @@ func (cmd *DockerCredentialsCmd) handleGet(log log.Logger) error {
 		return fmt.Errorf("no credentials server URL")
 	}
 
+	credentials := getDockerCredentialsFromWorkspaceServer(&dockercredentials.Credentials{ServerURL: strings.TrimSpace(string(url))})
+	if credentials != nil {
+		raw, err := json.Marshal(credentials)
+		if err != nil {
+			log.Errorf("Error encoding credentials: %v", err)
+			return nil
+		}
+		fmt.Print(string(raw))
+		return nil
+	}
+
 	rawJSON, err := json.Marshal(&dockercredentials.Request{ServerURL: strings.TrimSpace(string(url))})
 	if err != nil {
 		return err
@@ -145,4 +160,65 @@ func (cmd *DockerCredentialsCmd) handleGet(log log.Logger) error {
 	// print response to stdout
 	fmt.Print(string(raw))
 	return nil
+}
+
+func getDockerCredentialsFromWorkspaceServer(credentials *dockercredentials.Credentials) *dockercredentials.Credentials {
+	if _, err := os.Stat(filepath.Join(container.RootDir, ts.RunnerProxySocket)); err != nil {
+		// workspace server is not running
+		return nil
+	}
+
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", filepath.Join(container.RootDir, ts.RunnerProxySocket))
+			},
+		},
+	}
+
+	credentials, credentialsErr := requestDockerCredentials(httpClient, credentials, "http://runner-proxy/docker-credentials")
+	if credentialsErr != nil {
+		// append error to /tmp/docker-credentials.log
+		file, err := os.OpenFile("/tmp/docker-credentials-error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil
+		}
+		defer file.Close()
+
+		_, _ = file.WriteString(fmt.Sprintf("get credentials from workspace server: %v\n", credentialsErr))
+		return nil
+	}
+
+	return credentials
+}
+
+func requestDockerCredentials(httpClient *http.Client, credentials *dockercredentials.Credentials, url string) (*dockercredentials.Credentials, error) {
+	rawJSON, err := json.Marshal(credentials)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling credentials: %w", err)
+	}
+
+	response, err := httpClient.Post(url, "application/json", bytes.NewReader(rawJSON))
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving credentials from credentials server: %w", err)
+	}
+	defer response.Body.Close()
+
+	raw, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading credentials: %w", err)
+	}
+
+	// has the request succeeded?
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error reading credentials (%d): %s", response.StatusCode, string(raw))
+	}
+
+	credentials = &dockercredentials.Credentials{}
+	err = json.Unmarshal(raw, credentials)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding credentials: %w", err)
+	}
+
+	return credentials, nil
 }

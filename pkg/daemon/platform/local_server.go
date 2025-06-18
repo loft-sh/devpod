@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/julienschmidt/httprouter"
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/platform"
 	platformclient "github.com/loft-sh/devpod/pkg/platform/client"
@@ -21,6 +22,7 @@ import (
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/ipn"
 	"tailscale.com/ipn/ipnstate"
@@ -82,6 +84,7 @@ var (
 	routeGetUserProfile    = "/user-profile"
 	routeUpdateUserProfile = "/update-user-profile"
 	routeGitCredentials    = "/git-credentials"
+	routeDockerCredentials = "/docker-credentials"
 )
 
 func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodContext string, log log.Logger) (*localServer, error) {
@@ -116,6 +119,7 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 	router.GET(routeGetUserProfile, l.userProfile)
 	router.POST(routeUpdateUserProfile, l.updateUserProfile)
 	router.GET(routeGitCredentials, l.getGitCredentials)
+	router.GET(routeDockerCredentials, l.getDockerCredentials)
 
 	handler := handlers.LoggingHandler(log.Writer(logrus.DebugLevel, true), router)
 	handler = handlers.RecoveryHandler(handlers.RecoveryLogger(panicLogger{log: l.log}), handlers.PrintRecoveryStack(true))(handler)
@@ -610,6 +614,27 @@ func (l *localServer) getGitCredentials(w http.ResponseWriter, r *http.Request, 
 	}
 
 	tryJSON(w, credentials)
+}
+
+func (l *localServer) getDockerCredentials(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	host := r.URL.Query().Get("server")
+	if host == "" {
+		http.Error(w, "missing required query parameter \"server\"", http.StatusBadRequest)
+		return
+	}
+
+	all, err := dockercredentials.ListCredentials()
+	if err != nil {
+		klog.Errorf("failed to list docker credentials: %v", err)
+		http.Error(w, fmt.Errorf("list docker credentials: %w", err).Error(), http.StatusInternalServerError)
+		return
+	}
+	for registry, cred := range all.Registries {
+		if registry == host {
+			tryJSON(w, cred)
+			return
+		}
+	}
 }
 
 func tryJSON(w http.ResponseWriter, obj interface{}) {
