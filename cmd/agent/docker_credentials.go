@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devpod/cmd/agent/container"
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -174,12 +175,13 @@ func getDockerCredentialsFromWorkspaceServer(credentials *dockercredentials.Cred
 				return net.Dial("unix", filepath.Join(container.RootDir, ts.RunnerProxySocket))
 			},
 		},
+		Timeout: 15 * time.Second,
 	}
 
 	credentials, credentialsErr := requestDockerCredentials(httpClient, credentials, "http://runner-proxy/docker-credentials")
 	if credentialsErr != nil {
-		// append error to /tmp/docker-credentials.log
-		file, err := os.OpenFile("/tmp/docker-credentials-error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		// append error to /var/devpod/docker-credentials.log
+		file, err := os.OpenFile("/var/devpod/docker-credentials-error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return nil
 		}
