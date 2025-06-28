@@ -39,7 +39,12 @@ func FeatureConfigToImageMetadata(feature *config.FeatureConfig) *config.ImageMe
 	return &config.ImageMetadata{
 		Entrypoint: feature.Entrypoint,
 		DevContainerActions: config.DevContainerActions{
-			Customizations: feature.Customizations,
+			OnCreateCommand:      feature.OnCreateCommand,
+			UpdateContentCommand: feature.UpdateContentCommand,
+			PostCreateCommand:    feature.PostCreateCommand,
+			PostStartCommand:     feature.PostStartCommand,
+			PostAttachCommand:    feature.PostAttachCommand,
+			Customizations:       feature.Customizations,
 		},
 		NonComposeBase: config.NonComposeBase{
 			Mounts:      feature.Mounts,

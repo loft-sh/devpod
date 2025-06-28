@@ -61,8 +61,7 @@ type FeatureConfig struct {
 	// Container environment variables.
 	ContainerEnv map[string]string `json:"containerEnv,omitempty"`
 
-	// Tool-specific configuration. Each tool should use a JSON object subproperty with a unique name to group its customizations.
-	Customizations map[string]interface{} `json:"customizations,omitempty"`
+	DevContainerActions `json:",inline"`
 
 	// Origin is the path where the feature was loaded from
 	Origin string `json:"-"`
