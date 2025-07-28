@@ -221,9 +221,20 @@ func (r *runner) getDockerlessRunOptions(
 		"DOCKERLESS_DOCKERFILE": buildInfo.Dockerless.Dockerfile,
 		"GODEBUG":               "http2client=0", // https://github.com/GoogleContainerTools/kaniko/issues/875
 	}
+
+	// Add containerEnv variables
 	for k, v := range mergedConfig.ContainerEnv {
 		env[k] = v
 	}
+
+	// Add remoteEnv variables to env to make them available to the container
+	for key, value := range mergedConfig.RemoteEnv {
+		if _, exists := env[key]; !exists {
+			env[key] = value
+		}
+	}
+
+
 	if buildInfo.Dockerless.Target != "" {
 		env["DOCKERLESS_TARGET"] = buildInfo.Dockerless.Target
 	}
@@ -292,6 +303,18 @@ func (r *runner) getRunOptions(
 	marshalled, err := json.Marshal(buildInfo.ImageMetadata.Raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "marshal config")
+	}
+
+	// Ensure containerEnv is initialized
+	if mergedConfig.ContainerEnv == nil {
+		mergedConfig.ContainerEnv = make(map[string]string)
+	}
+
+	// Add remoteEnv variables to containerEnv to make them available to the container
+	for key, value := range mergedConfig.RemoteEnv {
+		if _, exists := mergedConfig.ContainerEnv[key]; !exists {
+			mergedConfig.ContainerEnv[key] = value
+		}
 	}
 
 	// build labels & entrypoint
