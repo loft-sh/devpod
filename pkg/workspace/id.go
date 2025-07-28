@@ -19,7 +19,9 @@ var (
 func ToID(str string) string {
 	str = strings.ToLower(filepath.ToSlash(str))
 	splitted := strings.Split(str, "@")
-	if len(splitted) == 2 {
+	isSshRef := len(splitted) > 1 && strings.LastIndex(str, ":") > -1;
+
+	if len(splitted) == 2 && !isSshRef {
 		// 1. Check if PR was specified
 		if prReferenceRegEx.MatchString(str) {
 			str = prReferenceRegEx.ReplaceAllStringFunc(splitted[1], git.GetIDForPR)
