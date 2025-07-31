@@ -27,5 +27,5 @@ is running DevPod deploys an agent to the container. The way in which DevPod com
 the kubernetes control plane (kubectl), this connection is secured based on this tunnel. The DevPod agent starts a SSH server using the STDIO of the secure tunnel in order for you local DevPod CLI/UI to forward
 ports over the SSH connection. Once this is done DevPod starts your local IDE and connects it to the devcontainer via SSH.
 
-If you developer environment requires any port forwarding, then your IDE or an SSH connection must be running. That's because devpod needs the SSH server running on the agent to perform the forwarding,
+If your developer environment requires any port forwarding, then your IDE or an SSH connection must be running. That's because devpod needs the SSH server running on the agent to perform the forwarding,
 which is deployed when starting the IDE or SSH session.
