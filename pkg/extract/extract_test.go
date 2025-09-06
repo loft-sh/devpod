@@ -93,25 +93,25 @@ func TestExtractSymlinkConflicts(t *testing.T) {
 }
 
 func TestExtractSymlinkMultipleConflicts(t *testing.T) {
-	// Test the specific case from the bug report: AGENTS.md -> GEMINI.md
+	// Test multiple symlinks pointing to the same target with re-extraction
 	tempDir, err := os.MkdirTemp("", "extract_multi_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Create the GEMINI.md file first (target of symlinks)
-	geminiPath := filepath.Join(tempDir, "GEMINI.md")
-	err = os.WriteFile(geminiPath, []byte("Gemini content"), 0644)
+	// Create the target file first
+	targetPath := filepath.Join(tempDir, "target.txt")
+	err = os.WriteFile(targetPath, []byte("target content"), 0644)
 	if err != nil {
-		t.Fatalf("Failed to create GEMINI.md: %v", err)
+		t.Fatalf("Failed to create target.txt: %v", err)
 	}
 
-	// Create existing AGENTS.md symlink (this should be preserved/replaced correctly)
-	agentsPath := filepath.Join(tempDir, "AGENTS.md")
-	err = os.Symlink("GEMINI.md", agentsPath)
+	// Create existing symlinks (this should be preserved/replaced correctly)
+	link1Path := filepath.Join(tempDir, "link1.txt")
+	err = os.Symlink("target.txt", link1Path)
 	if err != nil {
-		t.Fatalf("Failed to create existing AGENTS.md symlink: %v", err)
+		t.Fatalf("Failed to create existing link1.txt symlink: %v", err)
 	}
 
 	// Create tar archive with the same symlinks (simulating the re-upload scenario)
@@ -123,22 +123,22 @@ func TestExtractSymlinkMultipleConflicts(t *testing.T) {
 		t.Fatalf("Extract failed with existing symlinks: %v", err)
 	}
 
-	// Verify both symlinks point to GEMINI.md
-	agentsTarget, err := os.Readlink(agentsPath)
+	// Verify both symlinks point to target.txt
+	link1Target, err := os.Readlink(link1Path)
 	if err != nil {
-		t.Fatalf("Failed to read AGENTS.md symlink: %v", err)
+		t.Fatalf("Failed to read link1.txt symlink: %v", err)
 	}
-	if agentsTarget != "GEMINI.md" {
-		t.Errorf("Expected AGENTS.md -> GEMINI.md, got %q", agentsTarget)
+	if link1Target != "target.txt" {
+		t.Errorf("Expected link1.txt -> target.txt, got %q", link1Target)
 	}
 
-	claudePath := filepath.Join(tempDir, "CLAUDE.md")
-	claudeTarget, err := os.Readlink(claudePath)
+	link2Path := filepath.Join(tempDir, "link2.txt")
+	link2Target, err := os.Readlink(link2Path)
 	if err != nil {
-		t.Fatalf("Failed to read CLAUDE.md symlink: %v", err)
+		t.Fatalf("Failed to read link2.txt symlink: %v", err)
 	}
-	if claudeTarget != "GEMINI.md" {
-		t.Errorf("Expected CLAUDE.md -> GEMINI.md, got %q", claudeTarget)
+	if link2Target != "target.txt" {
+		t.Errorf("Expected link2.txt -> target.txt, got %q", link2Target)
 	}
 }
 
@@ -165,45 +165,45 @@ func createTarWithSymlink(t *testing.T, linkName, target string) []byte {
 	return buf.Bytes()
 }
 
-// Helper function to create a tar archive with multiple symlinks (GEMINI.md scenario)
+// Helper function to create a tar archive with multiple symlinks
 func createTarWithMultipleSymlinks(t *testing.T) []byte {
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
 
-	// Add GEMINI.md file
-	geminiContent := []byte("Gemini content for AI assistants")
+	// Add target file
+	targetContent := []byte("target content")
 	hdr := &tar.Header{
-		Name: "GEMINI.md",
-		Size: int64(len(geminiContent)),
+		Name: "target.txt",
+		Size: int64(len(targetContent)),
 		Mode: 0644,
 	}
 	if err := tw.WriteHeader(hdr); err != nil {
-		t.Fatalf("Failed to write GEMINI.md header: %v", err)
+		t.Fatalf("Failed to write target.txt header: %v", err)
 	}
-	if _, err := tw.Write(geminiContent); err != nil {
-		t.Fatalf("Failed to write GEMINI.md content: %v", err)
+	if _, err := tw.Write(targetContent); err != nil {
+		t.Fatalf("Failed to write target.txt content: %v", err)
 	}
 
-	// Add AGENTS.md symlink
+	// Add first symlink
 	hdr = &tar.Header{
-		Name:     "AGENTS.md",
-		Linkname: "GEMINI.md",
+		Name:     "link1.txt",
+		Linkname: "target.txt",
 		Typeflag: tar.TypeSymlink,
 		Mode:     0755,
 	}
 	if err := tw.WriteHeader(hdr); err != nil {
-		t.Fatalf("Failed to write AGENTS.md symlink header: %v", err)
+		t.Fatalf("Failed to write link1.txt symlink header: %v", err)
 	}
 
-	// Add CLAUDE.md symlink
+	// Add second symlink
 	hdr = &tar.Header{
-		Name:     "CLAUDE.md",
-		Linkname: "GEMINI.md",
+		Name:     "link2.txt",
+		Linkname: "target.txt",
 		Typeflag: tar.TypeSymlink,
 		Mode:     0755,
 	}
 	if err := tw.WriteHeader(hdr); err != nil {
-		t.Fatalf("Failed to write CLAUDE.md symlink header: %v", err)
+		t.Fatalf("Failed to write link2.txt symlink header: %v", err)
 	}
 
 	if err := tw.Close(); err != nil {

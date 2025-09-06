@@ -134,7 +134,7 @@ func extractNext(tarReader *tar.Reader, destFolder string, options *Options) (bo
 				return false, perrors.Wrapf(err, "remove existing file for symlink %s", outFileName)
 			}
 		}
-		
+
 		err := os.Symlink(header.Linkname, outFileName)
 		if err != nil {
 			return false, perrors.Wrapf(err, "create symlink %s -> %s", outFileName, header.Linkname)
