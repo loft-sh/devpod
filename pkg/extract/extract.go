@@ -119,9 +119,25 @@ func extractNext(tarReader *tar.Reader, destFolder string, options *Options) (bo
 
 		return true, nil
 	} else if header.Typeflag == tar.TypeSymlink {
+		// Check if a symlink or file already exists at the target location
+		if _, err := os.Lstat(outFileName); err == nil {
+			// File or symlink exists, check if it's the same symlink
+			if existingLink, err := os.Readlink(outFileName); err == nil {
+				// It's an existing symlink, check if it points to the same target
+				if existingLink == header.Linkname {
+					// Same symlink already exists, no need to recreate
+					return true, nil
+				}
+			}
+			// Different symlink or regular file exists, remove it first
+			if err := os.Remove(outFileName); err != nil {
+				return false, perrors.Wrapf(err, "remove existing file for symlink %s", outFileName)
+			}
+		}
+
 		err := os.Symlink(header.Linkname, outFileName)
 		if err != nil {
-			return false, err
+			return false, perrors.Wrapf(err, "create symlink %s -> %s", outFileName, header.Linkname)
 		}
 
 		return true, nil
