@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moby/patternmatcher"
 	"github.com/pkg/errors"
 )
 
@@ -59,17 +60,29 @@ type Archiver struct {
 	writer       *tar.Writer
 	writtenFiles map[string]bool
 
-	excludedPaths []string
+	excludedPaths  []string
+	patternMatcher *patternmatcher.PatternMatcher
 }
 
 // NewArchiver creates a new archiver
 func NewArchiver(basePath string, writer *tar.Writer, excludedPaths []string) *Archiver {
+	var pm *patternmatcher.PatternMatcher
+	if len(excludedPaths) > 0 {
+		var err error
+		pm, err = patternmatcher.New(excludedPaths)
+		if err != nil {
+			// Fall back to the old behavior if pattern matching fails
+			pm = nil
+		}
+	}
+
 	return &Archiver{
 		basePath:     basePath,
 		writer:       writer,
 		writtenFiles: map[string]bool{},
 
-		excludedPaths: excludedPaths,
+		excludedPaths:  excludedPaths,
+		patternMatcher: pm,
 	}
 }
 
@@ -104,6 +117,18 @@ func (a *Archiver) AddToArchive(relativePath string) error {
 }
 
 func (a *Archiver) isExcluded(relativePath string) bool {
+	// Use proper pattern matching if available
+	if a.patternMatcher != nil {
+		// Convert path to forward slashes for cross-platform pattern matching
+		normalizedPath := filepath.ToSlash(relativePath)
+		matched, err := a.patternMatcher.MatchesOrParentMatches(normalizedPath)
+		if err == nil {
+			return matched
+		}
+		// If pattern matching fails, fall back to the old behavior
+	}
+
+	// Fallback to simple prefix matching for backwards compatibility
 	for _, excludePath := range a.excludedPaths {
 		if strings.HasPrefix(relativePath, excludePath) {
 			return true
