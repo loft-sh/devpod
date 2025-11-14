@@ -1,0 +1,17 @@
+{
+    "name": "Docker with features that use environment variables",
+    "image": "mcr.microsoft.com/vscode/devcontainers/base:alpine",
+    "features": {
+        "./test-feature": {
+            "version": "1.0.0"
+        }
+    },
+    "remoteEnv": {
+        "TEST_FEATURE_ENV": "feature_value"
+    },
+    "postCreateCommand": [
+        "sh",
+        "-c",
+        "cat /tmp/feature-entrypoint-env.txt > $HOME/feature-env-value.out"
+    ]
+}

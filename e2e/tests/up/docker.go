@@ -429,6 +429,45 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				server.Close()
 			}, ginkgo.SpecTimeout(framework.GetTimeout()))
+
+			ginkgo.It("should start a new workspace with feature that uses environment variables", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-feature-env")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd(ctx, "docker")
+				err = f.DevPodProviderUse(ctx, "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir, "--debug")
+				framework.ExpectNoError(err)
+
+				workspace, err := f.FindWorkspace(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				projectName := workspace.ID
+				ids, err := dockerHelper.FindContainer(ctx, []string{
+					fmt.Sprintf("%s=%s", config.DockerIDLabel, workspace.UID),
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 container to be created")
+
+				// Verify the environment variable was passed to the feature in postCreateCommand
+				featureEnvValue, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/feature-env-value.out", projectName})
+				framework.ExpectNoError(err)
+				featureEnvValue = strings.TrimSpace(featureEnvValue)
+				gomega.Expect(featureEnvValue).To(gomega.Equal("RESULT_ENV=feature_value"), "Feature should have access to environment variable in postCreateCommand")
+
+				// Verify standard DevPod environment variables are present
+				devpodEnv, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "env | grep DEVPOD", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(devpodEnv).To(gomega.ContainSubstring("DEVPOD=true"), "DEVPOD environment variable should be set")
+				gomega.Expect(devpodEnv).To(gomega.ContainSubstring("DEVPOD_WORKSPACE_ID="), "DEVPOD_WORKSPACE_ID environment variable should be set")
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 		})
 	})
 })
