@@ -25,6 +25,7 @@ type SubstitutionContext struct {
 	LocalWorkspaceFolder     string            `json:"LocalWorkspaceFolder,omitempty"`
 	ContainerWorkspaceFolder string            `json:"ContainerWorkspaceFolder,omitempty"`
 	Env                      map[string]string `json:"Env,omitempty"`
+	DisableSELinuxFlag       bool              `json:"DisableSELinuxFlag,omitempty"`
 
 	WorkspaceMount string `json:"WorkspaceMount,omitempty"`
 }

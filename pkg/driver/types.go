@@ -80,4 +80,7 @@ type RunOptions struct {
 	// Bind mounts are expected to get copied from local to remote once. Volume mounts are expected
 	// to be persisted for the lifetime of the container.
 	Mounts []*config.Mount `json:"mounts,omitempty"`
+
+	// DisableSELinuxFlag indicates if SELinux flags should be disabled for the Workspace mount
+	DisableSELinuxFlag bool `json:"disableSELinuxFlag,omitempty"`
 }

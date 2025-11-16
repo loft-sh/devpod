@@ -183,6 +183,7 @@ func (r *runner) runContainer(
 	}
 
 	runOptions.Env = r.addExtraEnvVars(runOptions.Env)
+	runOptions.DisableSELinuxFlag = substitutionContext.DisableSELinuxFlag
 
 	// check if docker
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
@@ -274,9 +275,10 @@ func (r *runner) getDockerlessRunOptions(
 			metadata.ImageMetadataLabel + "=" + string(marshalled),
 			config.UserLabel + "=" + buildInfo.Dockerless.User,
 		},
-		Privileged:     mergedConfig.Privileged,
-		WorkspaceMount: &workspaceMountParsed,
-		Mounts:         mounts,
+		Privileged:         mergedConfig.Privileged,
+		WorkspaceMount:     &workspaceMountParsed,
+		Mounts:             mounts,
+		DisableSELinuxFlag: substitutionContext.DisableSELinuxFlag,
 	}, nil
 }
 
@@ -312,18 +314,19 @@ func (r *runner) getRunOptions(
 	}
 
 	return &driver.RunOptions{
-		UID:            uid,
-		Image:          buildInfo.ImageName,
-		User:           user,
-		Entrypoint:     entrypoint,
-		Cmd:            cmd,
-		Env:            mergedConfig.ContainerEnv,
-		CapAdd:         mergedConfig.CapAdd,
-		Labels:         labels,
-		Privileged:     mergedConfig.Privileged,
-		WorkspaceMount: &workspaceMountParsed,
-		SecurityOpt:    mergedConfig.SecurityOpt,
-		Mounts:         mergedConfig.Mounts,
+		UID:                uid,
+		Image:              buildInfo.ImageName,
+		User:               user,
+		Entrypoint:         entrypoint,
+		Cmd:                cmd,
+		Env:                mergedConfig.ContainerEnv,
+		CapAdd:             mergedConfig.CapAdd,
+		Labels:             labels,
+		Privileged:         mergedConfig.Privileged,
+		WorkspaceMount:     &workspaceMountParsed,
+		SecurityOpt:        mergedConfig.SecurityOpt,
+		Mounts:             mergedConfig.Mounts,
+		DisableSELinuxFlag: substitutionContext.DisableSELinuxFlag,
 	}, nil
 }
 

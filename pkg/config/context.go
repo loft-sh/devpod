@@ -22,6 +22,7 @@ const (
 	ContextOptionAgentInjectTimeout         = "AGENT_INJECT_TIMEOUT"
 	ContextOptionRegistryCache              = "REGISTRY_CACHE"
 	ContextOptionSSHStrictHostKeyChecking   = "SSH_STRICT_HOST_KEY_CHECKING"
+	ContextOptionDisableSELinuxFlag         = "DISABLE_SELINUX_FLAG"
 )
 
 var ContextOptions = []ContextOption{
@@ -102,6 +103,12 @@ var ContextOptions = []ContextOption{
 	{
 		Name:        ContextOptionSSHStrictHostKeyChecking,
 		Description: "Enables strict ssh host key checking for all operations",
+		Default:     "false",
+		Enum:        []string{"true", "false"},
+	},
+	{
+		Name:        ContextOptionDisableSELinuxFlag,
+		Description: "Adds the z flag to the workspace mounts to disable SELinux",
 		Default:     "false",
 		Enum:        []string{"true", "false"},
 	},

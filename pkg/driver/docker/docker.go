@@ -273,6 +273,14 @@ func (d *dockerDriver) RunDockerDevContainer(
 			mountPath = strings.Replace(mountPath, ",consistency='consistent'", "", 1)
 		}
 
+		if options.DisableSELinuxFlag {
+			if ok, err := helper.SELinuxEnabled(ctx); ok && err == nil {
+				mountPath = fmt.Sprintf("%s,z", mountPath)
+			} else if err != nil {
+				d.Log.Infof("Unable to check if docker is running with SELinux. Assuming it is not.")
+			}
+		}
+
 		args = append(args, "--mount", mountPath)
 	}
 

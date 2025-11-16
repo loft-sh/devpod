@@ -67,6 +67,15 @@ func (r *DockerHelper) GPUSupportEnabled() (bool, error) {
 	return strings.Contains(string(out), "nvidia-container-runtime"), nil
 }
 
+func (r *DockerHelper) SELinuxEnabled(ctx context.Context) (bool, error) {
+	out, err := r.buildCmd(ctx, "info", "-f", "{{.Host.Security.SELinuxEnabled}}").Output()
+	if err != nil {
+		return false, command.WrapCommandError(out, err)
+	}
+
+	return strings.Contains(string(out), "true"), nil
+}
+
 func (r *DockerHelper) FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error) {
 	containers, err := r.FindContainer(ctx, labels)
 	if err != nil {

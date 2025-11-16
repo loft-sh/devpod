@@ -138,6 +138,7 @@ func (r *runner) substitute(
 		parsedConfig.DockerfileContainer = config.DockerfileContainer{}
 		parsedConfig.ImageContainer = config.ImageContainer{Image: options.DevContainerImage}
 	}
+	substitutionContext.DisableSELinuxFlag = options.DisableSELinuxFlag
 
 	parsedConfig.Origin = configFile
 	return &config.SubstitutedConfig{
