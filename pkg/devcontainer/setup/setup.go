@@ -26,7 +26,12 @@ import (
 )
 
 const (
-	ResultLocation = "/var/run/devpod/result.json"
+	DefaultResultLocation = "/var/run/devpod/result.json"
+)
+
+var (
+	ResultLocation = DefaultResultLocation
+	MarkerBaseDir  = "/var/devpod"
 )
 
 func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspaceEnv []string, chownProjects bool, platformOptions *devpod.PlatformOptions, tunnelClient tunnel.TunnelClient, log log.Logger) error {
@@ -37,6 +42,12 @@ func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspac
 	err := ChownWorkspace(setupInfo, chownProjects, log)
 	if err != nil {
 		return errors.Wrap(err, "chown workspace")
+	}
+
+	// chown mounts
+	err = ChownMounts(setupInfo, log)
+	if err != nil {
+		log.Warnf("Error chowning mounts: %v", err)
 	}
 
 	// patch remote env
@@ -176,6 +187,40 @@ func ChownWorkspace(setupInfo *config.Result, recursive bool, log log.Logger) er
 		}
 	}
 
+	return nil
+}
+
+func ChownMounts(setupInfo *config.Result, log log.Logger) error {
+	user := config.GetRemoteUser(setupInfo)
+	exists, err := markerFileExists("chownMounts", "")
+	if err != nil {
+		return err
+	} else if exists {
+		return nil
+	}
+
+	// check if we have any mounts to chown
+	mounts := config.GetMounts(setupInfo)
+	if len(mounts) == 0 {
+		return nil
+	}
+
+	log.Infof("Chown mounts...")
+	for _, m := range mounts {
+		if m.Type == "bind" && m.Target != "" {
+			// check if it is the workspace folder
+			if strings.HasPrefix(m.Target, setupInfo.SubstitutionContext.ContainerWorkspaceFolder) {
+				continue
+			}
+
+			log.Debugf("Chown mount %s...", m.Target)
+			err = copy2.Chown(m.Target, user)
+			if err != nil {
+				// Just log warning as some mounts might not be chownable or might not exist in the same way
+				log.Debugf("Failed to chown mount %s: %v", m.Target, err)
+			}
+		}
+	}
 	return nil
 }
 
@@ -330,7 +375,7 @@ func SetupKubeConfig(ctx context.Context, setupInfo *config.Result, tunnelClient
 }
 
 func markerFileExists(markerName string, markerContent string) (bool, error) {
-	markerName = filepath.Join("/var/devpod", markerName+".marker")
+	markerName = filepath.Join(MarkerBaseDir, markerName+".marker")
 	t, err := os.ReadFile(markerName)
 	if err != nil && !os.IsNotExist(err) {
 		return false, err

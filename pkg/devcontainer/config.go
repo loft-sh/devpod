@@ -89,18 +89,19 @@ func (r *runner) getDefaultConfig(options provider2.CLIOptions) (*config.DevCont
 	return defaultConfig, nil
 }
 
-func (r *runner) getSubstitutedConfig(options provider2.CLIOptions) (*config.SubstitutedConfig, *config.SubstitutionContext, error) {
+func (r *runner) getSubstitutedConfig(options provider2.CLIOptions, probedEnv map[string]string) (*config.SubstitutedConfig, *config.SubstitutionContext, error) {
 	rawConfig, err := r.getRawConfig(options)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return r.substitute(options, rawConfig)
+	return r.substitute(options, rawConfig, probedEnv)
 }
 
 func (r *runner) substitute(
 	options provider2.CLIOptions,
 	rawParsedConfig *config.DevContainerConfig,
+	probedEnv map[string]string,
 ) (*config.SubstitutedConfig, *config.SubstitutionContext, error) {
 	configFile := rawParsedConfig.Origin
 
@@ -110,11 +111,17 @@ func (r *runner) substitute(
 		r.WorkspaceConfig.Workspace.ID,
 		rawParsedConfig,
 	)
+	// merge probed environment with os.Environ()
+	env := config.ListToObject(os.Environ())
+	for k, v := range probedEnv {
+		env[k] = v
+	}
+
 	substitutionContext := &config.SubstitutionContext{
 		DevContainerID:           r.ID,
 		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
 		ContainerWorkspaceFolder: containerWorkspaceFolder,
-		Env:                      config.ListToObject(os.Environ()),
+		Env:                      env,
 
 		WorkspaceMount: workspaceMount,
 	}

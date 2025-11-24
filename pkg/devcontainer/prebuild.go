@@ -21,7 +21,7 @@ func (r *runner) Build(ctx context.Context, options provider.BuildOptions) (stri
 		return "", fmt.Errorf("building only supported with docker driver")
 	}
 
-	substitutedConfig, substitutionContext, err := r.getSubstitutedConfig(options.CLIOptions)
+	substitutedConfig, substitutionContext, err := r.getSubstitutedConfig(options.CLIOptions, map[string]string{})
 	if err != nil {
 		return "", err
 	}

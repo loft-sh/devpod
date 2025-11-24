@@ -92,7 +92,14 @@ type UpOptions struct {
 func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duration) (*config.Result, error) {
 	r.Log.Debugf("Up devcontainer for workspace '%s' with timeout %s", r.WorkspaceConfig.Workspace.ID, timeout)
 
-	substitutedConfig, substitutionContext, err := r.getSubstitutedConfig(options.CLIOptions)
+	// probe local user environment for localEnv substitution
+	probedEnv, err := config.ProbeUserEnvWithUserSwitch(ctx, string(config.DefaultUserEnvProbe), "", false, r.Log)
+	if err != nil {
+		r.Log.Warnf("failed to probe local user environment, localEnv variables may not work: %v", err)
+		probedEnv = map[string]string{}
+	}
+
+	substitutedConfig, substitutionContext, err := r.getSubstitutedConfig(options.CLIOptions, probedEnv)
 	if err != nil {
 		return nil, err
 	}

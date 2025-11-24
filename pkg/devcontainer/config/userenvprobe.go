@@ -48,6 +48,10 @@ func NewUserEnvProbe(probe string) (UserEnvProbe, error) {
 }
 
 func ProbeUserEnv(ctx context.Context, probe string, userName string, log log.Logger) (map[string]string, error) {
+	return ProbeUserEnvWithUserSwitch(ctx, probe, userName, true, log)
+}
+
+func ProbeUserEnvWithUserSwitch(ctx context.Context, probe string, userName string, switchUser bool, log log.Logger) (map[string]string, error) {
 	userEnvProbe, err := NewUserEnvProbe(probe)
 	if err != nil {
 		log.Warnf("Get user env probe: %v", err)
@@ -66,12 +70,12 @@ func ProbeUserEnv(ctx context.Context, probe string, userName string, log log.Lo
 	log.Debugf("running user env probe with shell \"%s\", probe \"%s\", user \"%s\" and command \"%s\"",
 		strings.Join(preferredShell, " "), string(userEnvProbe), userName, "cat /proc/self/environ")
 
-	probedEnv, err := doProbe(ctx, userEnvProbe, preferredShell, userName, "cat /proc/self/environ", '\x00', log)
+	probedEnv, err := doProbeWithUserSwitch(ctx, userEnvProbe, preferredShell, userName, "cat /proc/self/environ", '\x00', switchUser, log)
 	if err != nil {
 		log.Debugf("running user env probe with shell \"%s\", probe \"%s\", user \"%s\" and command \"%s\"",
 			strings.Join(preferredShell, " "), string(userEnvProbe), userName, "printenv")
 
-		newProbedEnv, newErr := doProbe(ctx, userEnvProbe, preferredShell, userName, "printenv", '\n', log)
+		newProbedEnv, newErr := doProbeWithUserSwitch(ctx, userEnvProbe, preferredShell, userName, "printenv", '\n', switchUser, log)
 		if newErr != nil {
 			log.Warnf("failed to probe user environment variables: %v, %v", err, newErr)
 		} else {
@@ -86,6 +90,10 @@ func ProbeUserEnv(ctx context.Context, probe string, userName string, log log.Lo
 }
 
 func doProbe(ctx context.Context, userEnvProbe UserEnvProbe, preferredShell []string, userName string, probeCmd string, sep byte, log log.Logger) (map[string]string, error) {
+	return doProbeWithUserSwitch(ctx, userEnvProbe, preferredShell, userName, probeCmd, sep, true, log)
+}
+
+func doProbeWithUserSwitch(ctx context.Context, userEnvProbe UserEnvProbe, preferredShell []string, userName string, probeCmd string, sep byte, switchUser bool, log log.Logger) (map[string]string, error) {
 	args := preferredShell
 	args = append(args, getShellArgs(userEnvProbe, userName, probeCmd)...)
 
@@ -93,9 +101,11 @@ func doProbe(ctx context.Context, userEnvProbe UserEnvProbe, preferredShell []st
 	defer cancel()
 	cmd := exec.CommandContext(timeoutCtx, args[0], args[1:]...)
 
-	err := PrepareCmdUser(cmd, userName)
-	if err != nil {
-		return nil, fmt.Errorf("prepare probe: %w", err)
+	if switchUser {
+		err := PrepareCmdUser(cmd, userName)
+		if err != nil {
+			return nil, fmt.Errorf("prepare probe: %w", err)
+		}
 	}
 
 	out, err := cmd.Output()
@@ -114,7 +124,7 @@ func doProbe(ctx context.Context, userEnvProbe UserEnvProbe, preferredShell []st
 			log.Debugf("failed to split env var: %s", line)
 			continue
 		}
-		retEnv[tokens[0]] = tokens[1]
+		retEnv[tokens[0]] = strings.Join(tokens[1:], "=")
 	}
 	if scanner.Err() != nil {
 		return nil, fmt.Errorf("scan shell output: %w", err)
