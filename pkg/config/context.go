@@ -19,6 +19,7 @@ const (
 	ContextOptionDotfilesScript             = "DOTFILES_SCRIPT"
 	ContextOptionSSHAgentForwarding         = "SSH_AGENT_FORWARDING"
 	ContextOptionSSHConfigPath              = "SSH_CONFIG_PATH"
+	ContextOptionSSHConfigIncludePath       = "SSH_CONFIG_INCLUDE_PATH"
 	ContextOptionAgentInjectTimeout         = "AGENT_INJECT_TIMEOUT"
 	ContextOptionRegistryCache              = "REGISTRY_CACHE"
 	ContextOptionSSHStrictHostKeyChecking   = "SSH_STRICT_HOST_KEY_CHECKING"
@@ -88,6 +89,10 @@ var ContextOptions = []ContextOption{
 	{
 		Name:        ContextOptionSSHConfigPath,
 		Description: "Specifies the path where the ssh config should be written to",
+	},
+	{
+		Name:        ContextOptionSSHConfigIncludePath,
+		Description: "Specifies an alternate path where DevPod host entries should be written. Use this when your main SSH config is read-only (e.g., managed by Nix). Your main SSH config should have an Include directive pointing to this file.",
 	},
 	{
 		Name:        ContextOptionAgentInjectTimeout,

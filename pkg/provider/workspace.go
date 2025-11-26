@@ -70,6 +70,9 @@ type Workspace struct {
 
 	// Path to the file where the SSH config to access the workspace is stored
 	SSHConfigPath string `json:"sshConfigPath,omitempty"`
+
+	// Path to an alternate file where DevPod entries are written (for read-only SSH configs)
+	SSHConfigIncludePath string `json:"sshConfigIncludePath,omitempty"`
 }
 
 type ProMetadata struct {
