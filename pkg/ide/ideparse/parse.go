@@ -202,6 +202,14 @@ var AllowedIDEs = []AllowedIDE{
 		Experimental: true,
 		Group:        config.IDEGroupPrimary,
 	},
+	{
+		Name:         config.IDEAntigravity,
+		DisplayName:  "Antigravity",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/antigravity.svg",
+		Experimental: true,
+		Group:        config.IDEGroupPrimary,
+	},
 }
 
 func RefreshIDEOptions(devPodConfig *config.Config, workspace *provider.Workspace, ide string, options []string) (*provider.Workspace, error) {

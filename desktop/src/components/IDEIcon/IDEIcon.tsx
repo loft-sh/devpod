@@ -10,6 +10,7 @@ import {
 } from "@chakra-ui/react"
 import { HiBeaker } from "react-icons/hi2"
 import {
+  AntigravitySvg,
   CLionSvg,
   CodiumSvg,
   CursorSvg,
@@ -75,6 +76,7 @@ const IDE_ICONS: Record<string, string> = {
   zed_dark: ZedDarkSvg,
   rstudio: RStudioSvg,
   windsurf: WindsurfSvg,
+  antigravity: AntigravitySvg,
 }
 
 type TIDEIconProps = Readonly<{ ide: TIDE; size?: "sm" | "md" }> & BoxProps

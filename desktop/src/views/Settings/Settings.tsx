@@ -483,6 +483,16 @@ function ExperimentalSettings() {
             Windsurf
           </FormLabel>
         </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_antigravity}
+            onChange={(e) => set("experimental_antigravity", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Antigravity
+          </FormLabel>
+        </HStack>
       </SettingSection>
 
       <SettingSection title="Additional CLI Flags" description={cliFlagsHelpText}>

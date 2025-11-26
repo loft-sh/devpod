@@ -32,6 +32,7 @@ const (
 	FlavorPositron Flavor = "positron"
 	FlavorCodium   Flavor = "codium"
 	FlavorWindsurf Flavor = "windsurf"
+	FlavorAntigravity Flavor = "antigravity"
 )
 
 func (f Flavor) DisplayName() string {
@@ -48,6 +49,8 @@ func (f Flavor) DisplayName() string {
 		return "VSCodium"
 	case FlavorWindsurf:
 		return "Windsurf"
+	case FlavorAntigravity:
+		return "Antigravity"
 	default:
 		return "VSCode"
 	}
@@ -461,6 +464,8 @@ func prepareServerLocation(userName string, create bool, flavor Flavor) (string,
 		folderName = ".vscodium-server"
 	case FlavorWindsurf:
 		folderName = ".windsurf-server"
+	case FlavorAntigravity:
+		folderName = ".antigravity-server"
 	}
 
 	folder := filepath.Join(homeFolder, folderName)

@@ -199,6 +199,7 @@ export const SUPPORTED_IDES = [
   "jupyternotebook",
   "fleet",
   "windsurf",
+  "antigravity",
 ] as const
 export type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
 export type TImportWorkspaceConfig = Readonly<{
