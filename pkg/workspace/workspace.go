@@ -39,6 +39,7 @@ func Resolve(
 	devContainerImage string,
 	devContainerPath string,
 	sshConfigPath string,
+	sshConfigIncludePath string,
 	source *providerpkg.WorkspaceSource,
 	uid string,
 	changeLastUsed bool,
@@ -63,6 +64,7 @@ func Resolve(
 		desiredMachine,
 		providerUserOptions,
 		sshConfigPath,
+		sshConfigIncludePath,
 		source,
 		uid,
 		changeLastUsed,
@@ -143,7 +145,7 @@ func Get(ctx context.Context, devPodConfig *config.Config, args []string, change
 
 	// check if we have no args
 	if len(args) == 0 {
-		provider, workspace, machine, err = selectWorkspace(ctx, devPodConfig, changeLastUsed, "", owner, log)
+		provider, workspace, machine, err = selectWorkspace(ctx, devPodConfig, changeLastUsed, "", "", owner, log)
 		if err != nil {
 			return nil, err
 		}
@@ -189,6 +191,7 @@ func resolveWorkspace(
 	desiredMachine string,
 	providerUserOptions []string,
 	sshConfigPath string,
+	sshConfigIncludePath string,
 	source *providerpkg.WorkspaceSource,
 	uid string,
 	changeLastUsed bool,
@@ -205,7 +208,7 @@ func resolveWorkspace(
 			return loadExistingWorkspace(devPodConfig, workspace.ID, changeLastUsed, log)
 		}
 
-		return selectWorkspace(ctx, devPodConfig, changeLastUsed, sshConfigPath, owner, log)
+		return selectWorkspace(ctx, devPodConfig, changeLastUsed, sshConfigPath, sshConfigIncludePath, owner, log)
 	}
 
 	// check if workspace already exists
@@ -237,13 +240,14 @@ func resolveWorkspace(
 		desiredMachine,
 		providerUserOptions,
 		sshConfigPath,
+		sshConfigIncludePath,
 		source,
 		isLocalPath,
 		uid,
 		log,
 	)
 	if err != nil {
-		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID, sshConfigPath, log)
+		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID, sshConfigPath, sshConfigIncludePath, log)
 		return nil, nil, nil, err
 	}
 
@@ -258,6 +262,7 @@ func createWorkspace(
 	desiredMachine string,
 	providerUserOptions []string,
 	sshConfigPath string,
+	sshConfigIncludePath string,
 	source *providerpkg.WorkspaceSource,
 	isLocalPath bool,
 	uid string,
@@ -272,7 +277,7 @@ func createWorkspace(
 	}
 
 	// resolve workspace
-	workspace, err := resolveWorkspaceConfig(ctx, provider, devPodConfig, name, workspaceID, source, isLocalPath, sshConfigPath, uid)
+	workspace, err := resolveWorkspaceConfig(ctx, provider, devPodConfig, name, workspaceID, source, isLocalPath, sshConfigPath, sshConfigIncludePath, uid)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -395,6 +400,7 @@ func resolveWorkspaceConfig(
 	source *providerpkg.WorkspaceSource,
 	isLocalPath bool,
 	sshConfigPath string,
+	sshConfigIncludePath string,
 	uid string,
 ) (*providerpkg.Workspace, error) {
 	now := types.Now()
@@ -408,9 +414,10 @@ func resolveWorkspaceConfig(
 		Provider: providerpkg.WorkspaceProviderConfig{
 			Name: defaultProvider.Config.Name,
 		},
-		CreationTimestamp: now,
-		LastUsedTimestamp: now,
-		SSHConfigPath:     sshConfigPath,
+		CreationTimestamp:    now,
+		LastUsedTimestamp:    now,
+		SSHConfigPath:        sshConfigPath,
+		SSHConfigIncludePath: sshConfigIncludePath,
 	}
 
 	// outside source set?
@@ -545,7 +552,7 @@ func findWorkspace(ctx context.Context, devPodConfig *config.Config, args []stri
 	return retWorkspace
 }
 
-func selectWorkspace(ctx context.Context, devPodConfig *config.Config, changeLastUsed bool, sshConfigPath string, owner platform.OwnerFilter, log log.Logger) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
+func selectWorkspace(ctx context.Context, devPodConfig *config.Config, changeLastUsed bool, sshConfigPath string, sshConfigIncludePath string, owner platform.OwnerFilter, log log.Logger) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
 	if !terminal.IsTerminalIn {
 		return nil, nil, nil, errProvideWorkspaceArg
 	}
@@ -595,6 +602,9 @@ func selectWorkspace(ctx context.Context, devPodConfig *config.Config, changeLas
 		if workspace.ID == selectedWorkspace.ID && workspace.IsPro() {
 			if workspace.SSHConfigPath == "" && sshConfigPath != "" {
 				workspace.SSHConfigPath = sshConfigPath
+			}
+			if workspace.SSHConfigIncludePath == "" && sshConfigIncludePath != "" {
+				workspace.SSHConfigIncludePath = sshConfigIncludePath
 			}
 			workspace.Imported = true
 			if err := providerpkg.SaveWorkspaceConfig(workspace); err != nil {

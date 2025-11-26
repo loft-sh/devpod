@@ -196,8 +196,9 @@ func (cmd *UpCmd) Run(
 			devPodHome = envDevPodHome
 		}
 		setupGPGAgentForwarding := cmd.GPGAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true"
+		sshConfigIncludePath := devPodConfig.ContextOption(config.ContextOptionSSHConfigIncludePath)
 
-		err = configureSSH(client, cmd.SSHConfigPath, user, workdir, setupGPGAgentForwarding, devPodHome)
+		err = configureSSH(client, cmd.SSHConfigPath, sshConfigIncludePath, user, workdir, setupGPGAgentForwarding, devPodHome)
 		if err != nil {
 			return err
 		}
@@ -979,15 +980,25 @@ func startBrowserTunnel(
 	return nil
 }
 
-func configureSSH(client client2.BaseWorkspaceClient, sshConfigPath, user, workdir string, gpgagent bool, devPodHome string) error {
+func configureSSH(client client2.BaseWorkspaceClient, sshConfigPath, sshConfigIncludePath, user, workdir string, gpgagent bool, devPodHome string) error {
 	path, err := devssh.ResolveSSHConfigPath(sshConfigPath)
 	if err != nil {
 		return errors.Wrap(err, "Invalid ssh config path")
 	}
 	sshConfigPath = path
 
+	// Resolve the include path if specified
+	if sshConfigIncludePath != "" {
+		includePath, err := devssh.ResolveSSHConfigPath(sshConfigIncludePath)
+		if err != nil {
+			return errors.Wrap(err, "Invalid ssh config include path")
+		}
+		sshConfigIncludePath = includePath
+	}
+
 	err = devssh.ConfigureSSHConfig(
 		sshConfigPath,
+		sshConfigIncludePath,
 		client.Context(),
 		client.Workspace(),
 		user,
@@ -1399,6 +1410,7 @@ func (cmd *UpCmd) prepareClient(ctx context.Context, devPodConfig *config.Config
 	if cmd.SSHConfigPath == "" {
 		cmd.SSHConfigPath = devPodConfig.ContextOption(config.ContextOptionSSHConfigPath)
 	}
+	sshConfigIncludePath := devPodConfig.ContextOption(config.ContextOptionSSHConfigIncludePath)
 
 	client, err := workspace2.Resolve(
 		ctx,
@@ -1413,6 +1425,7 @@ func (cmd *UpCmd) prepareClient(ctx context.Context, devPodConfig *config.Config
 		cmd.DevContainerImage,
 		cmd.DevContainerPath,
 		cmd.SSHConfigPath,
+		sshConfigIncludePath,
 		source,
 		cmd.UID,
 		true,
