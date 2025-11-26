@@ -987,7 +987,6 @@ func configureSSH(client client2.BaseWorkspaceClient, sshConfigPath, sshConfigIn
 	}
 	sshConfigPath = path
 
-	// Resolve the include path if specified
 	if sshConfigIncludePath != "" {
 		includePath, err := devssh.ResolveSSHConfigPath(sshConfigIncludePath)
 		if err != nil {

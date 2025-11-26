@@ -89,7 +89,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				cmd.DevContainerImage,
 				cmd.DevContainerPath,
 				sshConfigPath,
-				"", // No include path for temporary build SSH config
+				"",
 				nil,
 				cmd.UID,
 				false,

@@ -637,7 +637,6 @@ func DeleteWorkspaceFolder(context string, workspaceID string, sshConfigPath str
 	}
 	sshConfigPath = path
 
-	// Resolve the include path if specified
 	if sshConfigIncludePath != "" {
 		includePath, err := ssh.ResolveSSHConfigPath(sshConfigIncludePath)
 		if err != nil {

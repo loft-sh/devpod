@@ -32,8 +32,6 @@ func configureSSHConfigSameFile(sshConfigPath, sshConfigIncludePath, context, wo
 	configLock.Lock()
 	defer configLock.Unlock()
 
-	// If an include path is specified, write DevPod entries there instead of the main config.
-	// This supports read-only SSH configs (e.g., managed by Nix Home Manager).
 	targetPath := sshConfigPath
 	if sshConfigIncludePath != "" {
 		targetPath = sshConfigIncludePath
@@ -170,8 +168,6 @@ func RemoveFromConfig(workspaceID string, sshConfigPath string, sshConfigInclude
 	configLock.Lock()
 	defer configLock.Unlock()
 
-	// If an include path is specified, remove DevPod entries from there instead of the main config.
-	// This supports read-only SSH configs (e.g., managed by Nix Home Manager).
 	targetPath := sshConfigPath
 	if sshConfigIncludePath != "" {
 		targetPath = sshConfigIncludePath
