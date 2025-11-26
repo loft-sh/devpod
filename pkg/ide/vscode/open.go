@@ -43,6 +43,8 @@ func openViaBrowser(workspace, folder string, newWindow bool, flavor Flavor, log
 		protocol = `codium://`
 	case FlavorWindsurf:
 		protocol = `windsurf://`
+	case FlavorAntigravity:
+		protocol = `antigravity://`
 	default:
 		return fmt.Errorf("unknown flavor %s", flavor)
 	}
@@ -178,6 +180,16 @@ func findCLI(flavor Flavor) string {
 			return "windsurf"
 		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Windsurf.app/Contents/Resources/app/bin/windsurf") {
 			return "/Applications/Windsurf.app/Contents/Resources/app/bin/windsurf"
+		}
+
+		return ""
+	}
+
+	if flavor == FlavorAntigravity {
+		if command.Exists("antigravity") {
+			return "antigravity"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Antigravity.app/Contents/Resources/app/bin/antigravity") {
+			return "/Applications/Antigravity.app/Contents/Resources/app/bin/antigravity"
 		}
 
 		return ""

@@ -277,6 +277,15 @@ func (cmd *UpCmd) Run(
 				vscode.FlavorWindsurf,
 				log,
 			)
+		case string(config.IDEAntigravity):
+			return vscode.Open(
+				ctx,
+				client.Workspace(),
+				result.SubstitutionContext.ContainerWorkspaceFolder,
+				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
+				vscode.FlavorAntigravity,
+				log,
+			)
 		case string(config.IDEOpenVSCode):
 			return startVSCodeInBrowser(
 				cmd.GPGAgentForwarding,
