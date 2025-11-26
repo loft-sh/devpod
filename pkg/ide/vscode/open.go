@@ -186,8 +186,8 @@ func findCLI(flavor Flavor) string {
 	}
 
 	if flavor == FlavorAntigravity {
-		if command.Exists("antigravity") {
-			return "antigravity"
+		if command.Exists("agy") {
+			return "agy"
 		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Antigravity.app/Contents/Resources/app/bin/antigravity") {
 			return "/Applications/Antigravity.app/Contents/Resources/app/bin/antigravity"
 		}
