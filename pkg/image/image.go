@@ -92,6 +92,23 @@ func GetImageConfig(ctx context.Context, image string, log log.Logger) (*v1.Conf
 	return configFile, img, nil
 }
 
+func GetImageConfigForArch(ctx context.Context, image, arch string, log log.Logger) (*v1.ConfigFile, v1.Image, error) {
+	log.Debugf("Getting image config for image '%s' with architecture '%s'", image, arch)
+	defer log.Debugf("Done getting image config for image '%s' with architecture '%s'", image, arch)
+
+	img, err := GetImageForArch(ctx, image, arch)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	configFile, err := img.ConfigFile()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "config file")
+	}
+
+	return configFile, img, nil
+}
+
 func ValidateTags(tags []string) error {
 	for _, tag := range tags {
 		if !IsValidDockerTag(tag) {
