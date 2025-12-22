@@ -2,6 +2,7 @@ package devcontainer
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
@@ -14,10 +15,16 @@ func (r *runner) inspectImage(ctx context.Context, imageName string) (*config.Im
 		return dockerDriver.InspectImage(ctx, imageName)
 	}
 
-	// fallback to just looking into the remote registry
-	imageConfig, _, err := image.GetImageConfig(ctx, imageName, r.Log)
+	// Get target architecture from the driver
+	targetArch, err := r.Driver.TargetArchitecture(ctx, r.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get target architecture: %w", err)
+	}
+
+	// Use architecture-specific image config retrieval
+	imageConfig, _, err := image.GetImageConfigForArch(ctx, imageName, targetArch, r.Log)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get image config for architecture %s: %w", targetArch, err)
 	}
 
 	return &config.ImageDetails{
