@@ -7,8 +7,9 @@ import (
 )
 
 type GitSSHSignatureRequest struct {
-	Content string
-	KeyPath string
+	Content  string
+	KeyPath  string
+	UseAgent bool `json:"UseAgent,omitempty"`
 }
 
 type GitSSHSignatureResponse struct {
@@ -23,8 +24,14 @@ func (req *GitSSHSignatureRequest) Sign() (*GitSSHSignatureResponse, error) {
 	var commitBuffer bytes.Buffer
 	commitBuffer.WriteString(req.Content)
 
+	// Build ssh-keygen arguments
+	args := []string{"-Y", "sign", "-f", req.KeyPath, "-n", "git"}
+	if req.UseAgent {
+		args = append(args, "-U")
+	}
+
 	// Create the command to run ssh-keygen
-	cmd := exec.Command("ssh-keygen", "-Y", "sign", "-f", req.KeyPath, "-n", "git")
+	cmd := exec.Command("ssh-keygen", args...)
 	cmd.Stdin = &commitBuffer
 
 	// Capture the output of the command

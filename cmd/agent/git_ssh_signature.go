@@ -16,6 +16,7 @@ type GitSSHSignatureCmd struct {
 	Namespace  string
 	BufferFile string
 	Command    string
+	UseAgent   bool
 }
 
 // NewGitSSHSignatureCmd creates new git-ssh-signature command
@@ -50,13 +51,14 @@ func NewGitSSHSignatureCmd(flags *flags.GlobalFlags) *cobra.Command {
 			cmd.BufferFile = args[len(args)-1]
 
 			return gitsshsigning.HandleGitSSHProgramCall(
-				cmd.CertPath, cmd.Namespace, cmd.BufferFile, logger)
+				cmd.CertPath, cmd.Namespace, cmd.BufferFile, cmd.UseAgent, logger)
 		},
 	}
 
 	gitSshSignatureCmd.Flags().StringVarP(&cmd.CertPath, "file", "f", "", "Path to the private key")
 	gitSshSignatureCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace")
 	gitSshSignatureCmd.Flags().StringVarP(&cmd.Command, "command", "Y", "sign", "Command - should be 'sign'")
+	gitSshSignatureCmd.Flags().BoolVarP(&cmd.UseAgent, "agent", "U", false, "Key resides in ssh-agent")
 
 	return gitSshSignatureCmd
 }

@@ -13,13 +13,13 @@ import (
 )
 
 // HandleGitSSHProgramCall implements logic handling call from git when signing a commit
-func HandleGitSSHProgramCall(certPath, namespace, bufferFile string, log log.Logger) error {
+func HandleGitSSHProgramCall(certPath, namespace, bufferFile string, useAgent bool, log log.Logger) error {
 	content, err := extractContentFromGitBuffer(bufferFile)
 	if err != nil {
 		return err
 	}
 
-	signature, err := requestContentSignature(content, certPath, log)
+	signature, err := requestContentSignature(content, certPath, useAgent, log)
 	if err != nil {
 		return err
 	}
@@ -37,8 +37,8 @@ func extractContentFromGitBuffer(bufferFile string) ([]byte, error) {
 }
 
 // requestContentSignature sends an HTTP request to the credentials server to sign the content
-func requestContentSignature(content []byte, certPath string, log log.Logger) ([]byte, error) {
-	requestBody, err := createSignatureRequestBody(content, certPath)
+func requestContentSignature(content []byte, certPath string, useAgent bool, log log.Logger) ([]byte, error) {
+	requestBody, err := createSignatureRequestBody(content, certPath, useAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -61,10 +61,11 @@ func writeSignatureToFile(signature []byte, bufferFile string, log log.Logger) e
 	return nil
 }
 
-func createSignatureRequestBody(content []byte, certPath string) ([]byte, error) {
+func createSignatureRequestBody(content []byte, certPath string, useAgent bool) ([]byte, error) {
 	request := &GitSSHSignatureRequest{
-		Content: string(content),
-		KeyPath: certPath,
+		Content:  string(content),
+		KeyPath:  certPath,
+		UseAgent: useAgent,
 	}
 	return json.Marshal(request)
 }
