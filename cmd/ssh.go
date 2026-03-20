@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
@@ -495,7 +495,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		}
 	}
 
-	workdir := filepath.Join("/workspaces", workspaceClient.Workspace())
+	workdir := path.Join("/workspaces", workspaceClient.Workspace())
 	if cmd.WorkDir != "" {
 		workdir = cmd.WorkDir
 	}
