@@ -33,6 +33,21 @@ exec /usr/local/bin/devpod agent container daemon
 `
 )
 
+// resolvedContainer holds the outputs that every code path through
+// runSingleContainer must produce before handing off to setupContainer.
+// Using a struct makes it impossible to forget either field.
+type resolvedContainer struct {
+	details      *config.ContainerDetails
+	mergedConfig *config.MergedDevContainerConfig
+}
+
+// resolveParams bundles the arguments shared by the container resolution methods.
+type resolveParams struct {
+	parsedConfig        *config.SubstitutedConfig
+	substitutionContext *config.SubstitutionContext
+	options             UpOptions
+}
+
 func (r *runner) runSingleContainer(
 	ctx context.Context,
 	parsedConfig *config.SubstitutedConfig,
@@ -60,157 +75,248 @@ func (r *runner) runSingleContainer(
 		}
 	}
 
-	// does the container already exist?
-	var (
-		mergedConfig *config.MergedDevContainerConfig
-	)
+	// Resolve container: ensure we have a running container with merged config.
+	var resolved *resolvedContainer
 
-	// if options.Recreate is true, and workspace is a running container, we should not rebuild
+	params := &resolveParams{
+		parsedConfig:        parsedConfig,
+		substitutionContext: substitutionContext,
+		options:             options,
+	}
+
 	if options.Recreate && parsedConfig.Config.ContainerID != "" {
 		return nil, fmt.Errorf("cannot recreate container not created by DevPod")
 	} else if !options.Recreate && containerDetails != nil {
-		// start container if not running
-		if strings.ToLower(containerDetails.State.Status) != "running" {
-			err = r.Driver.StartDevContainer(ctx, r.ID)
-			if err != nil {
-				return nil, err
-			}
-
-			// Re-fetch container details after starting so that state
-			// fields (e.g. StartedAt) are current for lifecycle hooks.
-			containerDetails, err = r.Driver.FindDevContainer(ctx, r.ID)
-			if err != nil {
-				return nil, fmt.Errorf("find dev container: %w", err)
-			}
-		}
-
-		// if we are working with a non-managed container, and it has set workingDir, set it as the workspaceFolder
-		if parsedConfig.Config.ContainerID != "" && containerDetails.Config.WorkingDir != "" {
-			substitutionContext.ContainerWorkspaceFolder = containerDetails.Config.WorkingDir
-		}
-
-		imageMetadataConfig, err := metadata.GetImageMetadataFromContainer(
-			containerDetails,
-			substitutionContext,
-			r.Log,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if options.ExtraDevContainerPath != "" {
-			if imageMetadataConfig == nil {
-				imageMetadataConfig = &config.ImageMetadataConfig{}
-			}
-			extraConfig, err := config.ParseDevContainerJSONFile(options.ExtraDevContainerPath)
-			if err != nil {
-				return nil, err
-			}
-			config.AddConfigToImageMetadata(extraConfig, imageMetadataConfig)
-		}
-
-		mergedConfig, err = config.MergeConfiguration(
-			parsedConfig.Config,
-			imageMetadataConfig.Config,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("merge config: %w", err)
-		}
-
-		// If driver can reprovision, rerun the devcontainer and let the driver handle follow-up steps
-		if d, ok := r.Driver.(driver.ReprovisioningDriver); ok && d.CanReprovision() {
-			err = r.Driver.RunDevContainer(ctx, r.ID, nil)
-			if err != nil {
-				return nil, fmt.Errorf("runner driver run dev container: %w", err)
-			}
-
-			// get from build info
-			containerDetails, err = r.Driver.FindDevContainer(ctx, r.ID)
-			if err != nil {
-				return nil, fmt.Errorf("find dev container: %w", err)
-			}
-		}
+		resolved, err = r.resolveExistingContainer(ctx, containerDetails, params)
 	} else {
-		// we need to build the container
-		buildInfo, err := r.build(ctx, parsedConfig, substitutionContext, provider2.BuildOptions{
-			CLIOptions: provider2.CLIOptions{
-				PrebuildRepositories:  options.PrebuildRepositories,
-				ForceDockerless:       options.ForceDockerless,
-				Platform:              options.Platform,
-				ExtraDevContainerPath: options.ExtraDevContainerPath,
-			},
-			NoBuild:       options.NoBuild,
-			RegistryCache: options.RegistryCache,
-			ExportCache:   false,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("build image: %w", err)
-		}
-
-		// delete container on recreation
-		if options.Recreate {
-			if _, ok := r.Driver.(driver.DockerDriver); ok {
-				err := r.Delete(ctx)
-				if err != nil {
-					return nil, fmt.Errorf("delete devcontainer: %w", err)
-				}
-			} else {
-				err := r.Driver.StopDevContainer(ctx, r.ID)
-				if err != nil {
-					return nil, fmt.Errorf("stop devcontainer: %w", err)
-				}
-			}
-		}
-
-		// merge configuration
-		mergedConfig, err = config.MergeConfiguration(
-			parsedConfig.Config,
-			buildInfo.ImageMetadata.Config,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("merge config: %w", err)
-		}
-
-		// Inject the daemon entrypoint if platform configuration is provided.
-		if options.Platform.AccessKey != "" {
-			r.Log.Debugf("Platform config detected, injecting DevPod daemon entrypoint.")
-
-			data, err := agent.GetEncodedWorkspaceDaemonConfig(
-				options.Platform,
-				r.WorkspaceConfig.Workspace,
-				substitutionContext,
-				mergedConfig,
-			)
-			if err != nil {
-				r.Log.Errorf("Failed to marshal daemon config: %v", err)
-			} else {
-				mergedConfig.ContainerEnv[config.WorkspaceDaemonConfigExtraEnvVar] = data
-			}
-		}
-
-		// run dev container
-		err = r.runContainer(ctx, parsedConfig, substitutionContext, mergedConfig, buildInfo)
-		if err != nil {
-			return nil, fmt.Errorf("runner run container: %w", err)
-		}
-
-		// TODO: wait here a bit for correct startup?
-
-		// get from build info
-		containerDetails, err = r.Driver.FindDevContainer(ctx, r.ID)
-		if err != nil {
-			return nil, fmt.Errorf("find dev container: %w", err)
-		}
+		resolved, err = r.resolveNewContainer(ctx, params)
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	// setup container
 	return r.setupContainer(ctx, &setupContainerParams{
 		rawConfig:           parsedConfig.Raw,
-		containerDetails:    containerDetails,
-		mergedConfig:        mergedConfig,
+		containerDetails:    resolved.details,
+		mergedConfig:        resolved.mergedConfig,
 		substitutionContext: substitutionContext,
 		timeout:             timeout,
 	})
+}
+
+// resolveExistingContainer handles the case where a container already exists.
+// It starts the container if stopped, merges configuration from container
+// metadata, and optionally reprovisions. Returns fresh container details.
+func (r *runner) resolveExistingContainer(
+	ctx context.Context,
+	containerDetails *config.ContainerDetails,
+	p *resolveParams,
+) (*resolvedContainer, error) {
+	containerDetails, err := r.ensureRunning(ctx, containerDetails)
+	if err != nil {
+		return nil, err
+	}
+
+	// For non-managed containers with a workingDir, use it as the workspace folder.
+	if p.parsedConfig.Config.ContainerID != "" && containerDetails.Config.WorkingDir != "" {
+		p.substitutionContext.ContainerWorkspaceFolder = containerDetails.Config.WorkingDir
+	}
+
+	mergedConfig, err := r.mergeExistingContainerConfig(containerDetails, p)
+	if err != nil {
+		return nil, err
+	}
+
+	containerDetails, err = r.reprovisionIfNeeded(ctx, containerDetails)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resolvedContainer{
+		details:      containerDetails,
+		mergedConfig: mergedConfig,
+	}, nil
+}
+
+// ensureRunning starts the container if it is not running and returns
+// fresh container details.
+func (r *runner) ensureRunning(
+	ctx context.Context,
+	containerDetails *config.ContainerDetails,
+) (*config.ContainerDetails, error) {
+	if strings.ToLower(containerDetails.State.Status) == "running" {
+		return containerDetails, nil
+	}
+
+	if err := r.Driver.StartDevContainer(ctx, r.ID); err != nil {
+		return nil, err
+	}
+	return r.findRunningContainerOrFail(ctx, "start")
+}
+
+// mergeExistingContainerConfig extracts image metadata from the running
+// container and merges it with the parsed devcontainer configuration.
+func (r *runner) mergeExistingContainerConfig(
+	containerDetails *config.ContainerDetails,
+	p *resolveParams,
+) (*config.MergedDevContainerConfig, error) {
+	imageMetadataConfig, err := metadata.GetImageMetadataFromContainer(
+		containerDetails,
+		p.substitutionContext,
+		r.Log,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.options.ExtraDevContainerPath != "" {
+		if imageMetadataConfig == nil {
+			imageMetadataConfig = &config.ImageMetadataConfig{}
+		}
+		extraConfig, err := config.ParseDevContainerJSONFile(p.options.ExtraDevContainerPath)
+		if err != nil {
+			return nil, err
+		}
+		config.AddConfigToImageMetadata(extraConfig, imageMetadataConfig)
+	}
+
+	mergedConfig, err := config.MergeConfiguration(
+		p.parsedConfig.Config,
+		imageMetadataConfig.Config,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("merge config: %w", err)
+	}
+	return mergedConfig, nil
+}
+
+// reprovisionIfNeeded re-runs the devcontainer via the driver if the driver
+// supports reprovisioning, and returns fresh container details.
+func (r *runner) reprovisionIfNeeded(
+	ctx context.Context,
+	containerDetails *config.ContainerDetails,
+) (*config.ContainerDetails, error) {
+	d, ok := r.Driver.(driver.ReprovisioningDriver)
+	if !ok || !d.CanReprovision() {
+		return containerDetails, nil
+	}
+
+	if err := r.Driver.RunDevContainer(ctx, r.ID, nil); err != nil {
+		return nil, fmt.Errorf("runner driver run dev container: %w", err)
+	}
+	return r.findRunningContainerOrFail(ctx, "reprovision")
+}
+
+// resolveNewContainer handles the case where no container exists (or recreate
+// is requested). It builds the image, runs a new container, and returns fresh
+// container details.
+func (r *runner) resolveNewContainer(
+	ctx context.Context,
+	p *resolveParams,
+) (*resolvedContainer, error) {
+	buildInfo, err := r.build(ctx, p.parsedConfig, p.substitutionContext, provider2.BuildOptions{
+		CLIOptions: provider2.CLIOptions{
+			PrebuildRepositories:  p.options.PrebuildRepositories,
+			ForceDockerless:       p.options.ForceDockerless,
+			Platform:              p.options.Platform,
+			ExtraDevContainerPath: p.options.ExtraDevContainerPath,
+		},
+		NoBuild:       p.options.NoBuild,
+		RegistryCache: p.options.RegistryCache,
+		ExportCache:   false,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("build image: %w", err)
+	}
+
+	if p.options.Recreate {
+		if err := r.deleteForRecreate(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	mergedConfig, err := config.MergeConfiguration(
+		p.parsedConfig.Config,
+		buildInfo.ImageMetadata.Config,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("merge config: %w", err)
+	}
+
+	r.injectDaemonEntrypoint(p, mergedConfig)
+
+	err = r.runContainer(ctx, p.parsedConfig, p.substitutionContext, mergedConfig, buildInfo)
+	if err != nil {
+		return nil, fmt.Errorf("runner run container: %w", err)
+	}
+
+	containerDetails, err := r.findRunningContainerOrFail(ctx, "creation")
+	if err != nil {
+		return nil, err
+	}
+
+	return &resolvedContainer{
+		details:      containerDetails,
+		mergedConfig: mergedConfig,
+	}, nil
+}
+
+// deleteForRecreate removes the existing container before recreating it.
+// Docker containers are fully deleted; other drivers stop the container.
+func (r *runner) deleteForRecreate(ctx context.Context) error {
+	if _, ok := r.Driver.(driver.DockerDriver); ok {
+		if err := r.Delete(ctx); err != nil {
+			return fmt.Errorf("delete devcontainer: %w", err)
+		}
+		return nil
+	}
+
+	if err := r.Driver.StopDevContainer(ctx, r.ID); err != nil {
+		return fmt.Errorf("stop devcontainer: %w", err)
+	}
+	return nil
+}
+
+// injectDaemonEntrypoint adds the workspace daemon config to the container
+// environment when platform configuration is provided.
+func (r *runner) injectDaemonEntrypoint(
+	p *resolveParams,
+	mergedConfig *config.MergedDevContainerConfig,
+) {
+	if p.options.Platform.AccessKey == "" {
+		return
+	}
+	r.Log.Debugf("Platform config detected, injecting DevPod daemon entrypoint.")
+
+	data, err := agent.GetEncodedWorkspaceDaemonConfig(
+		p.options.Platform,
+		r.WorkspaceConfig.Workspace,
+		p.substitutionContext,
+		mergedConfig,
+	)
+	if err != nil {
+		r.Log.Errorf("Failed to marshal daemon config: %v", err)
+		return
+	}
+	mergedConfig.ContainerEnv[config.WorkspaceDaemonConfigExtraEnvVar] = data
+}
+
+// findRunningContainerOrFail re-fetches container details from the driver and
+// returns an error if the container cannot be found. Use after any operation
+// that changes container state (start, create, reprovision) to ensure callers
+// always receive current, non-nil details.
+func (r *runner) findRunningContainerOrFail(
+	ctx context.Context,
+	operation string,
+) (*config.ContainerDetails, error) {
+	details, err := r.Driver.FindDevContainer(ctx, r.ID)
+	if err != nil {
+		return nil, fmt.Errorf("find dev container after %s: %w", operation, err)
+	}
+	if details == nil {
+		return nil, fmt.Errorf("dev container %s not found after %s", r.ID, operation)
+	}
+	return details, nil
 }
 
 func (r *runner) runContainer(
