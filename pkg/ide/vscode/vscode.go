@@ -3,6 +3,7 @@ package vscode
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -248,7 +249,22 @@ func (o *VsCodeServer) findServerBinaryPath(location string) string {
 			out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
 			cancel()
 			if err != nil {
-				o.log.Infof("Execute %s: %v", binPath, command.WrapCommandError(out, err))
+				legacyErr := command.WrapCommandError(out, err)
+				nestedBinPath, nestedErr := findServerBinaryInDir(binDir, "cursor-server")
+				if nestedErr == nil && nestedBinPath != binPath {
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+					out, err = exec.CommandContext(ctx, nestedBinPath, "--help").CombinedOutput()
+					cancel()
+					if err == nil {
+						binPath = nestedBinPath
+						break
+					}
+
+					o.log.Infof("Execute %s: %v", nestedBinPath, command.WrapCommandError(out, err))
+				} else {
+					o.log.Infof("Execute %s: %v", binPath, legacyErr)
+				}
+
 				o.log.Info("Wait until cursor-server is installed...")
 				time.Sleep(time.Second * 3)
 				continue
@@ -396,6 +412,36 @@ func (o *VsCodeServer) findServerBinaryPath(location string) string {
 	}
 
 	return binPath
+}
+
+func findServerBinaryInDir(root, binaryName string) (string, error) {
+	if _, err := os.Stat(root); err != nil {
+		return "", err
+	}
+
+	found := ""
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if filepath.Base(path) != binaryName {
+			return nil
+		}
+
+		found = path
+		return fs.SkipAll
+	})
+	if err != nil && err != fs.SkipAll {
+		return "", err
+	}
+	if found == "" {
+		return "", fmt.Errorf("read dir %s: install dir is missing", root)
+	}
+
+	return found, nil
 }
 
 func (o *VsCodeServer) findCodeServerBinary(location string) (string, error) {
