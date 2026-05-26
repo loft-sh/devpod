@@ -7,6 +7,7 @@ import (
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -115,7 +116,18 @@ func (c *Client) Exec(ctx context.Context, options *ExecStreamOptions) error {
 			Stderr:    options.Stderr != nil,
 		}, scheme.ParameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(c.config, "POST", execRequest.URL())
+	// Use WebSocket executor which is the default as of Kubernetes 1.31. Fall back to SPDY for older clusters.
+	websocketExec, err := remotecommand.NewWebSocketExecutor(c.config, "GET", execRequest.URL().String())
+	if err != nil {
+		return err
+	}
+	spdyExec, err := remotecommand.NewSPDYExecutor(c.config, "POST", execRequest.URL())
+	if err != nil {
+		return err
+	}
+	exec, err := remotecommand.NewFallbackExecutor(websocketExec, spdyExec, func(err error) bool {
+		return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
+	})
 	if err != nil {
 		return err
 	}
