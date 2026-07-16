@@ -108,7 +108,7 @@ To manage options from the app, head over the `Providers` section, and click
 
 ### Managing options from DevPod CLI
 
-Options for providers can be set during the `use` or `add` phase:
+Options for providers can be set during the `use` or `add` phase. For example:
 
 ```sh
 devpod provider add <provider-name> -o KEY=value
@@ -121,14 +121,14 @@ devpod provider use <provider-name> -o KEY=value
 ```
 
 
-Else, to can manage options afterwards from CLI, you can list the table of provider's options by using:
+You can list the provider options by using:
 
 
 ```sh
 devpod provider options <provider-name>
 ```
 
-An example output for the AWS Provider is:
+An example of the AWS Provider options output is:
 
 ```
           NAME            | REQUIRED |          DESCRIPTION           |         DEFAULT         |          VALUE           
