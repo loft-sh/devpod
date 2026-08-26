@@ -103,8 +103,9 @@ curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/de
 ```text
 md -Force "$Env:APPDATA\devpod"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
 Invoke-WebRequest -URI "https://github.com/loft-sh/devpod/releases/latest/download/devpod-windows-amd64.exe" -OutFile $Env:APPDATA\devpod\devpod.exe;
-$env:Path += ";" + $Env:APPDATA + "\devpod";
-[Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User);
+$dir = "$Env:APPDATA\devpod"; $old = @((Get-Item HKCU:\Environment).GetValue('Path', '', 'DoNotExpandEnvironmentNames') -split ';' | Where-Object { $_ -and $_ -ne $dir });
+Set-ItemProperty HKCU:\Environment Path (($old + $dir) -join ';') -Type ExpandString; $env:Path += ";$dir";
+[Environment]::SetEnvironmentVariable('DevPodPathRefresh', $null, 'User');
 ```
 
 </TabItem>
