@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
@@ -495,7 +495,10 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		}
 	}
 
-	workdir := filepath.Join("/workspaces", workspaceClient.Workspace())
+	// build the remote workdir with path.Join instead of filepath.Join,
+	// because the path is used on a Linux container even when devpod
+	// itself runs on Windows, where filepath.Join would use backslashes
+	workdir := path.Join("/workspaces", workspaceClient.Workspace())
 	if cmd.WorkDir != "" {
 		workdir = cmd.WorkDir
 	}
