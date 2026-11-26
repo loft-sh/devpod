@@ -60,6 +60,10 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string
 				log.Debugf("attempt to bind %s:%d - %s", host, port, "granted")
 				return true
 			},
+			LocalUnixForwardingCallback: func(ctx ssh.Context, socketPath string) bool {
+				log.Debugf("Accepted unix forward: %s", socketPath)
+				return true
+			},
 			ReverseUnixForwardingCallback: func(ctx ssh.Context, socketPath string) bool {
 				log.Debugf("attempt to bind socket %s", socketPath)
 

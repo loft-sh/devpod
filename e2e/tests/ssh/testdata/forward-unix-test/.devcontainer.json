@@ -1,0 +1,5 @@
+{
+	"name": "Unix socket forward",
+	"image": "alpine:latest",
+	"postCreateCommand": "apk add --no-cache socat"
+}
